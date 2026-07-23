@@ -79,35 +79,35 @@ extern "C" {
 
 
 /* Defines for PWM_0 */
-#define PWM_0_INST                                                         TIMA1
-#define PWM_0_INST_IRQHandler                                   TIMA1_IRQHandler
-#define PWM_0_INST_INT_IRQN                                     (TIMA1_INT_IRQn)
+#define PWM_0_INST                                                         TIMA0
+#define PWM_0_INST_IRQHandler                                   TIMA0_IRQHandler
+#define PWM_0_INST_INT_IRQN                                     (TIMA0_INT_IRQn)
 #define PWM_0_INST_CLK_FREQ                                              4000000
-/* GPIO defines for channel 1 */
-#define GPIO_PWM_0_C1_PORT                                                 GPIOA
-#define GPIO_PWM_0_C1_PIN                                         DL_GPIO_PIN_16
-#define GPIO_PWM_0_C1_IOMUX                                      (IOMUX_PINCM38)
-#define GPIO_PWM_0_C1_IOMUX_FUNC                     IOMUX_PINCM38_PF_TIMA1_CCP1
-#define GPIO_PWM_0_C1_IDX                                    DL_TIMER_CC_1_INDEX
+/* GPIO defines for channel 3 */
+#define GPIO_PWM_0_C3_PORT                                                 GPIOA
+#define GPIO_PWM_0_C3_PIN                                         DL_GPIO_PIN_12
+#define GPIO_PWM_0_C3_IOMUX                                      (IOMUX_PINCM34)
+#define GPIO_PWM_0_C3_IOMUX_FUNC                     IOMUX_PINCM34_PF_TIMA0_CCP3
+#define GPIO_PWM_0_C3_IDX                                    DL_TIMER_CC_3_INDEX
 
 /* Defines for PWM_1 */
-#define PWM_1_INST                                                         TIMA0
-#define PWM_1_INST_IRQHandler                                   TIMA0_IRQHandler
-#define PWM_1_INST_INT_IRQN                                     (TIMA0_INT_IRQn)
+#define PWM_1_INST                                                         TIMG0
+#define PWM_1_INST_IRQHandler                                   TIMG0_IRQHandler
+#define PWM_1_INST_INT_IRQN                                     (TIMG0_INT_IRQn)
 #define PWM_1_INST_CLK_FREQ                                              4000000
-/* GPIO defines for channel 0 */
-#define GPIO_PWM_1_C0_PORT                                                 GPIOA
-#define GPIO_PWM_1_C0_PIN                                          DL_GPIO_PIN_8
-#define GPIO_PWM_1_C0_IOMUX                                      (IOMUX_PINCM19)
-#define GPIO_PWM_1_C0_IOMUX_FUNC                     IOMUX_PINCM19_PF_TIMA0_CCP0
-#define GPIO_PWM_1_C0_IDX                                    DL_TIMER_CC_0_INDEX
+/* GPIO defines for channel 1 */
+#define GPIO_PWM_1_C1_PORT                                                 GPIOA
+#define GPIO_PWM_1_C1_PIN                                         DL_GPIO_PIN_13
+#define GPIO_PWM_1_C1_IOMUX                                      (IOMUX_PINCM35)
+#define GPIO_PWM_1_C1_IOMUX_FUNC                     IOMUX_PINCM35_PF_TIMG0_CCP1
+#define GPIO_PWM_1_C1_IDX                                    DL_TIMER_CC_1_INDEX
 
 
 
 /* Defines for TIMER_TICK */
-#define TIMER_TICK_INST                                                  (TIMG0)
-#define TIMER_TICK_INST_IRQHandler                              TIMG0_IRQHandler
-#define TIMER_TICK_INST_INT_IRQN                                (TIMG0_INT_IRQn)
+#define TIMER_TICK_INST                                                  (TIMA1)
+#define TIMER_TICK_INST_IRQHandler                              TIMA1_IRQHandler
+#define TIMER_TICK_INST_INT_IRQN                                (TIMA1_INT_IRQn)
 #define TIMER_TICK_INST_LOAD_VALUE                                         (39U)
 
 
@@ -164,21 +164,22 @@ extern "C" {
 /* Defines for Pin: GPIOB.3 with pinCMx 16 on package pin 51 */
 #define LED_Pin_PIN                                              (DL_GPIO_PIN_3)
 #define LED_Pin_IOMUX                                            (IOMUX_PINCM16)
-/* Port definition for Pin Group TB6612 */
-#define TB6612_PORT                                                      (GPIOA)
-
-/* Defines for AIN1: GPIOA.14 with pinCMx 36 on package pin 7 */
-#define TB6612_AIN1_PIN                                         (DL_GPIO_PIN_14)
-#define TB6612_AIN1_IOMUX                                        (IOMUX_PINCM36)
-/* Defines for AIN2: GPIOA.15 with pinCMx 37 on package pin 8 */
-#define TB6612_AIN2_PIN                                         (DL_GPIO_PIN_15)
-#define TB6612_AIN2_IOMUX                                        (IOMUX_PINCM37)
-/* Defines for BIN1: GPIOA.12 with pinCMx 34 on package pin 5 */
-#define TB6612_BIN1_PIN                                         (DL_GPIO_PIN_12)
-#define TB6612_BIN1_IOMUX                                        (IOMUX_PINCM34)
-/* Defines for BIN2: GPIOA.13 with pinCMx 35 on package pin 6 */
-#define TB6612_BIN2_PIN                                         (DL_GPIO_PIN_13)
-#define TB6612_BIN2_IOMUX                                        (IOMUX_PINCM35)
+/* Defines for AIN1: GPIOB.19 with pinCMx 45 on package pin 16 */
+#define TB6612_AIN1_PORT                                                 (GPIOB)
+#define TB6612_AIN1_PIN                                         (DL_GPIO_PIN_19)
+#define TB6612_AIN1_IOMUX                                        (IOMUX_PINCM45)
+/* Defines for AIN2: GPIOB.17 with pinCMx 43 on package pin 14 */
+#define TB6612_AIN2_PORT                                                 (GPIOB)
+#define TB6612_AIN2_PIN                                         (DL_GPIO_PIN_17)
+#define TB6612_AIN2_IOMUX                                        (IOMUX_PINCM43)
+/* Defines for BIN1: GPIOA.16 with pinCMx 38 on package pin 9 */
+#define TB6612_BIN1_PORT                                                 (GPIOA)
+#define TB6612_BIN1_PIN                                         (DL_GPIO_PIN_16)
+#define TB6612_BIN1_IOMUX                                        (IOMUX_PINCM38)
+/* Defines for BIN2: GPIOB.24 with pinCMx 52 on package pin 23 */
+#define TB6612_BIN2_PORT                                                 (GPIOB)
+#define TB6612_BIN2_PIN                                         (DL_GPIO_PIN_24)
+#define TB6612_BIN2_IOMUX                                        (IOMUX_PINCM52)
 /* Port definition for Pin Group LCD */
 #define LCD_PORT                                                         (GPIOB)
 
@@ -208,14 +209,14 @@ extern "C" {
 #define ENCODER_PIN_B_IIDX                                  (DL_GPIO_IIDX_DIO27)
 #define ENCODER_PIN_B_PIN                                       (DL_GPIO_PIN_27)
 #define ENCODER_PIN_B_IOMUX                                      (IOMUX_PINCM60)
-/* Defines for PIN_A2: GPIOA.25 with pinCMx 55 on package pin 26 */
-#define ENCODER_PIN_A2_IIDX                                 (DL_GPIO_IIDX_DIO25)
-#define ENCODER_PIN_A2_PIN                                      (DL_GPIO_PIN_25)
-#define ENCODER_PIN_A2_IOMUX                                     (IOMUX_PINCM55)
-/* Defines for PIN_B2: GPIOA.24 with pinCMx 54 on package pin 25 */
-#define ENCODER_PIN_B2_IIDX                                 (DL_GPIO_IIDX_DIO24)
-#define ENCODER_PIN_B2_PIN                                      (DL_GPIO_PIN_24)
-#define ENCODER_PIN_B2_IOMUX                                     (IOMUX_PINCM54)
+/* Defines for PIN_A2: GPIOA.14 with pinCMx 36 on package pin 7 */
+#define ENCODER_PIN_A2_IIDX                                 (DL_GPIO_IIDX_DIO14)
+#define ENCODER_PIN_A2_PIN                                      (DL_GPIO_PIN_14)
+#define ENCODER_PIN_A2_IOMUX                                     (IOMUX_PINCM36)
+/* Defines for PIN_B2: GPIOA.25 with pinCMx 55 on package pin 26 */
+#define ENCODER_PIN_B2_IIDX                                 (DL_GPIO_IIDX_DIO25)
+#define ENCODER_PIN_B2_PIN                                      (DL_GPIO_PIN_25)
+#define ENCODER_PIN_B2_IOMUX                                     (IOMUX_PINCM55)
 /* Port definition for Pin Group TRACKING */
 #define TRACKING_PORT                                                    (GPIOB)
 

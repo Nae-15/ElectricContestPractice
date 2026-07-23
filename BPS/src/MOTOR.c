@@ -30,15 +30,15 @@ void AO_Control(uint8_t Direction, uint32_t Speed)
 
     if( Direction == 1 )
     {
-        AIN1_OUT(0);
-        AIN2_OUT(1);
-    }
-    else if(Direction==0)
-    {
         AIN1_OUT(1);
         AIN2_OUT(0);
     }
-    DL_TimerA_setCaptureCompareValue(PWM_0_INST, Speed, GPIO_PWM_0_C1_IDX);
+    else if(Direction==0)
+    {
+        AIN1_OUT(0);
+        AIN2_OUT(1);
+    }
+    DL_TimerA_setCaptureCompareValue(PWM_0_INST, Speed, GPIO_PWM_0_C3_IDX);
 }
 
 
@@ -59,14 +59,14 @@ void BO_Control(uint8_t Direction, uint32_t Speed)
 
     if( Direction == 1 )
     {
-        BIN1_OUT(1);
-        BIN2_OUT(0);
-    }
-    else if(Direction==0)
-    {
         BIN1_OUT(0);
         BIN2_OUT(1);
     }
+    else if(Direction==0)
+    {
+        BIN1_OUT(1);
+        BIN2_OUT(0);
+    }
 
-    DL_TimerA_setCaptureCompareValue(PWM_1_INST, Speed, GPIO_PWM_1_C0_IDX);
+    DL_TimerG_setCaptureCompareValue(PWM_1_INST, Speed, GPIO_PWM_1_C1_IDX);
 }

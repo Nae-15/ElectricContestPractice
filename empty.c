@@ -39,18 +39,18 @@ int time=0;
 int32_t Distance;
 
 //-----------PID--------------------
-float PID_KP = 0.3f;    // 比例系数（配合前馈，只需小幅度纠偏）
-float PID_KI = 0.1f;    // 积分系数
+float PID_KP = 0.05f;   // 比例系数（12V响应太快，极保守防超调）
+float PID_KI = 0.05f;   // 积分系数（慢速积分，稳步收敛）
 float PID_KD = 0.0f;    // 微分系数
 
-// 前馈系数：实测 PWM 125 → 速度 500，即 1 PWM = 4 速度单位
-#define VELOCITY_FEEDFORWARD 0.25f
+// 前馈系数：12V供电，PWM 200 → 速度 2100，即 1 PWM ≈ 10.5 速度
+#define VELOCITY_FEEDFORWARD 0.095f
 //PID输出限幅
-#define PID_MAX_OUTPUT 800.0f // 最大输出（PWM值范围）
-#define PID_MIN_OUTPUT 80.0f    // 最小输出，避免超调时电机完全停转导致振荡
+#define PID_MAX_OUTPUT 800.0f // 最大输出
+#define PID_MIN_OUTPUT 80.0f  // 最小输出
 //PID积分限幅
-#define PID_Integral_Max 200.0f // 积分最大值（前馈后误差小，不需过大）
-#define PID_Integral_Min -800.0f // 积分最小值
+#define PID_Integral_Max 50.0f  // 积分最大值（小幅慢调）
+#define PID_Integral_Min -50.0f // 积分最小值（对称限幅）
 
 /*
 //单个速度单位间隔（单位：mm/s）
@@ -74,8 +74,8 @@ void PID_Contorl(void);     //PID实际调用
 int main(void)
 {   
     ALL_Init();
-    Wheel_Left.Velocity_Target=1500;
-    Wheel_Right.Velocity_Target=1000;
+    Wheel_Left.Velocity_Target=2000;
+    Wheel_Right.Velocity_Target=1500;
     while(1) 
     {   
         Velocity_Get();
@@ -83,8 +83,9 @@ int main(void)
         {
             PID_Contorl();
             lc_printf("%f\n",Wheel_Left.PID_Output);
-            BO_Control(1,Wheel_Left.PID_Output);
-            AO_Control(1,Wheel_Right.PID_Output);
+            AO_Control(1,Wheel_Left.PID_Output);
+            BO_Control(1,Wheel_Right.PID_Output);
+   
         }
 
         LCD_ShowIntNum(30, 30, Wheel_Left.Velocity, 5, GREEN, BLACK, 12);
@@ -161,8 +162,14 @@ static void PID_Get(Wheel *Wheel_Temp)//PID计算
 {
     //更新误差
     Wheel_Temp->PID_LastError = Wheel_Temp->PID_Error;
-    //本次误差 =目标速度-实际速度 
+    //本次误差 =目标速度-实际速度
     Wheel_Temp->PID_Error = Wheel_Temp->Velocity_Target - Wheel_Temp->Velocity;
+
+    // 误差限幅：限制 P 项发力，避免起步过猛
+    #define PID_ERROR_MAX 200.0f
+    float PID_Error_Clamped = Wheel_Temp->PID_Error;
+    if (PID_Error_Clamped >  PID_ERROR_MAX) PID_Error_Clamped =  PID_ERROR_MAX;
+    if (PID_Error_Clamped < -PID_ERROR_MAX) PID_Error_Clamped = -PID_ERROR_MAX;
 
     //PI为0时不积分
     if (PID_KI != 0.0f)
@@ -191,13 +198,15 @@ static void PID_Get(Wheel *Wheel_Temp)//PID计算
     // PID输出 = 前馈 + P项 + I项 + D项
     // 前馈提供基础 PWM（约125），PI 只纠偏 ±20，避免从零爬坡导致超调
     Wheel_Temp->PID_Output = VELOCITY_FEEDFORWARD * Wheel_Temp->Velocity_Target
-                  + PID_KP * Wheel_Temp->PID_Error
+                  + PID_KP * PID_Error_Clamped
                   + PID_KI * Wheel_Temp->PID_Integral
-                  + PID_KD * (Wheel_Temp->PID_Error - Wheel_Temp->PID_LastError);
+                  + PID_KD * (PID_Error_Clamped - Wheel_Temp->PID_LastError);
 
     // 输出限幅
     if (Wheel_Temp->PID_Output > PID_MAX_OUTPUT)
         Wheel_Temp->PID_Output = PID_MAX_OUTPUT;
+    else if (Wheel_Temp->Velocity_Target == 0.0f)
+        Wheel_Temp->PID_Output = 0.0f;     // 目标为0时允许完全停止
     else if (Wheel_Temp->PID_Output < PID_MIN_OUTPUT)
         Wheel_Temp->PID_Output = PID_MIN_OUTPUT;
 }
@@ -211,9 +220,9 @@ void PID_Contorl(void)//PID控制
 void TIMER_TICK_INST_IRQHandler(void)
 {
     //如果产生了定时器中断
-    switch( DL_TimerG_getPendingInterrupt(TIMER_TICK_INST) )
+    switch( DL_TimerA_getPendingInterrupt(TIMER_TICK_INST) )
     {
-        case DL_TIMER_IIDX_ZERO:
+        case DL_TIMERA_IIDX_ZERO:
         {
             Velocity_Counter++;
             time++;
