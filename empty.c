@@ -74,7 +74,6 @@ void PID_Contorl(void);     //PID实际调用
 int main(void)
 {   
     ALL_Init();
-
     Wheel_Left.Velocity_Target=1500;
     Wheel_Right.Velocity_Target=1000;
     while(1) 

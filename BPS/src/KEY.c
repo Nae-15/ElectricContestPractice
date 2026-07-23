@@ -1,11 +1,11 @@
 #include "KEY.h"
-/*
+
 uint8_t Key_Get(void)
 {
 	uint8_t i;
-	const uint32_t key_pins[] = {KEY1, KEY2, KEY3, KEY4};
+	const uint32_t key_pins[] = {KEY1, KEY2, KEY3};
 
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 3; i++)
 	{
 		if (!(DL_GPIO_readPins(KEY_PORT, key_pins[i])))
 		{
@@ -20,4 +20,3 @@ uint8_t Key_Get(void)
 	}
 	return 0;
 }
-*/
