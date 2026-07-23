@@ -13,6 +13,7 @@ typedef struct//车轮结构体
     float Velocity;         // 当前速度
     float Velocity_Last;    // 上次速度
     float Velocity_Target;  // 目标速度
+    float Feedforward;      // 前馈系数（左右轮独立校准）
     float PID_Error;        // 输出误差
     float PID_LastError;    // 上次输出误差
     float PID_Integral;     // PID积分值
@@ -43,8 +44,9 @@ float PID_KP = 0.05f;   // 比例系数（12V响应太快，极保守防超调�
 float PID_KI = 0.05f;   // 积分系数（慢速积分，稳步收敛）
 float PID_KD = 0.0f;    // 微分系数
 
-// 前馈系数：12V供电，PWM 200 → 速度 2100，即 1 PWM ≈ 10.5 速度
-#define VELOCITY_FEEDFORWARD 0.095f
+// 前馈系数：12V供电，左右独立校准（右比左快2.72%，左需补偿）
+#define LEFT_FEEDFORWARD  0.0976f
+#define RIGHT_FEEDFORWARD 0.0920f
 //PID输出限幅
 #define PID_MAX_OUTPUT 800.0f // 最大输出
 #define PID_MIN_OUTPUT 80.0f  // 最小输出
@@ -65,6 +67,8 @@ uint8_t Target_Circle_Count = 0;
 uint8_t Circle_Count = 0;
 */
 
+void System_Init(void);     //系统初始化
+void Data_Init(void);       //数据初始化
 void ALL_Init(void);        //全局初始化
 void Velocity_Get(void);    //速度获取
 void Distance_Get(void);    //距离获取
@@ -75,14 +79,15 @@ int main(void)
 {   
     ALL_Init();
     Wheel_Left.Velocity_Target=2000;
-    Wheel_Right.Velocity_Target=1500;
+    Wheel_Right.Velocity_Target=2000;
+
     while(1) 
     {   
         Velocity_Get();
         if(time>Velocity_Interval)
         {
             PID_Contorl();
-            lc_printf("%f\n",Wheel_Left.PID_Output);
+            lc_printf("%f\n",Wheel_Right.Velocity);//串口0发送
             AO_Control(1,Wheel_Left.PID_Output);
             BO_Control(1,Wheel_Right.PID_Output);
    
@@ -96,26 +101,42 @@ int main(void)
     }
 }
 
-void ALL_Init(void)//全局初始化
+void System_Init(void)//系统初始化
 {
     __enable_irq();//MSPM0 Boot ROM 冷启动后关闭了全局中断，启动代码未重新打开，加入 __enable_irq() 确保所有外设中断可用。
 
     SYSCFG_DL_init();
  
-    NVIC_ClearPendingIRQ(TIMER_TICK_INST_INT_IRQN);//
+    //系统计时中断
+    NVIC_ClearPendingIRQ(TIMER_TICK_INST_INT_IRQN);
     NVIC_EnableIRQ(TIMER_TICK_INST_INT_IRQN);
-
+    
     Encoder_Init();
-
+    
     LCD_Init();
     LCD_Fill(0, 0, 300, LCD_H, BLACK);
 
+    //IMU占用串口0
     IMU_Init();
+    sendCaliYawCommand();
+}
 
+void Data_Init(void)//数据初始化
+{
+    Wheel_Left.Feedforward  = LEFT_FEEDFORWARD;
+    Wheel_Right.Feedforward = RIGHT_FEEDFORWARD;
+    
+    //编码器数值初始化
     Encoder_Get(1, &Wheel_Left.Encoder, NULL);
     Encoder_Get(2, &Wheel_Right.Encoder, NULL);
     Wheel_Left.Encoder_Last  = Wheel_Left.Encoder;
     Wheel_Right.Encoder_Last = Wheel_Right.Encoder;
+}
+
+void ALL_Init(void)//全局初始化
+{
+    System_Init();
+    Data_Init();
 }
 
 void Velocity_Get(void)//计算轮子速度
@@ -197,7 +218,7 @@ static void PID_Get(Wheel *Wheel_Temp)//PID计算
 
     // PID输出 = 前馈 + P项 + I项 + D项
     // 前馈提供基础 PWM（约125），PI 只纠偏 ±20，避免从零爬坡导致超调
-    Wheel_Temp->PID_Output = VELOCITY_FEEDFORWARD * Wheel_Temp->Velocity_Target
+    Wheel_Temp->PID_Output = Wheel_Temp->Feedforward * Wheel_Temp->Velocity_Target
                   + PID_KP * PID_Error_Clamped
                   + PID_KI * Wheel_Temp->PID_Integral
                   + PID_KD * (PID_Error_Clamped - Wheel_Temp->PID_LastError);
