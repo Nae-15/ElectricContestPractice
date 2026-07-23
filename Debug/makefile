@@ -22,6 +22,7 @@ ORDERED_OBJS += \
 "./BPS/src/IMU.o" \
 "./BPS/src/KEY.o" \
 "./BPS/src/MOTOR.o" \
+"./BPS/src/TRACK.o" \
 "./BPS/src/YAW_PID.o" \
 $(GEN_CMDS__FLAG) \
 -Wl,-ldevice.cmd.genlibs \
@@ -152,8 +153,8 @@ ElcContestTest.out: $(OBJS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(GEN_MISC_FILES__QUOTED)$(GEN_FILES__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "empty.o" "ti_msp_dl_config.o" "boot_config.o" "startup_mspm0g350x_ticlang.o" "BPS\Board\board.o" "BPS\lcd\lcd.o" "BPS\lcd\lcd_init.o" "BPS\src\BLINK.o" "BPS\src\ENCODER.o" "BPS\src\IMU.o" "BPS\src\KEY.o" "BPS\src\MOTOR.o" "BPS\src\YAW_PID.o" 
-	-$(RM) "empty.d" "ti_msp_dl_config.d" "boot_config.d" "startup_mspm0g350x_ticlang.d" "BPS\Board\board.d" "BPS\lcd\lcd.d" "BPS\lcd\lcd_init.d" "BPS\src\BLINK.d" "BPS\src\ENCODER.d" "BPS\src\IMU.d" "BPS\src\KEY.d" "BPS\src\MOTOR.d" "BPS\src\YAW_PID.d" 
+	-$(RM) "empty.o" "ti_msp_dl_config.o" "boot_config.o" "startup_mspm0g350x_ticlang.o" "BPS\Board\board.o" "BPS\lcd\lcd.o" "BPS\lcd\lcd_init.o" "BPS\src\BLINK.o" "BPS\src\ENCODER.o" "BPS\src\IMU.o" "BPS\src\KEY.o" "BPS\src\MOTOR.o" "BPS\src\TRACK.o" "BPS\src\YAW_PID.o" 
+	-$(RM) "empty.d" "ti_msp_dl_config.d" "boot_config.d" "startup_mspm0g350x_ticlang.d" "BPS\Board\board.d" "BPS\lcd\lcd.d" "BPS\lcd\lcd_init.d" "BPS\src\BLINK.d" "BPS\src\ENCODER.d" "BPS\src\IMU.d" "BPS\src\KEY.d" "BPS\src\MOTOR.d" "BPS\src\TRACK.d" "BPS\src\YAW_PID.d" 
 	-@echo ' '
 
 .PHONY: all clean dependents

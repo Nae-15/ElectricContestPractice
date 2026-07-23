@@ -11,6 +11,7 @@ C_SRCS += \
 ../BPS/src/IMU.c \
 ../BPS/src/KEY.c \
 ../BPS/src/MOTOR.c \
+../BPS/src/TRACK.c \
 ../BPS/src/YAW_PID.c 
 
 C_DEPS += \
@@ -19,6 +20,7 @@ C_DEPS += \
 ./BPS/src/IMU.d \
 ./BPS/src/KEY.d \
 ./BPS/src/MOTOR.d \
+./BPS/src/TRACK.d \
 ./BPS/src/YAW_PID.d 
 
 OBJS += \
@@ -27,6 +29,7 @@ OBJS += \
 ./BPS/src/IMU.o \
 ./BPS/src/KEY.o \
 ./BPS/src/MOTOR.o \
+./BPS/src/TRACK.o \
 ./BPS/src/YAW_PID.o 
 
 OBJS__QUOTED += \
@@ -35,6 +38,7 @@ OBJS__QUOTED += \
 "BPS\src\IMU.o" \
 "BPS\src\KEY.o" \
 "BPS\src\MOTOR.o" \
+"BPS\src\TRACK.o" \
 "BPS\src\YAW_PID.o" 
 
 C_DEPS__QUOTED += \
@@ -43,6 +47,7 @@ C_DEPS__QUOTED += \
 "BPS\src\IMU.d" \
 "BPS\src\KEY.d" \
 "BPS\src\MOTOR.d" \
+"BPS\src\TRACK.d" \
 "BPS\src\YAW_PID.d" 
 
 C_SRCS__QUOTED += \
@@ -50,6 +55,7 @@ C_SRCS__QUOTED += \
 "../BPS/src/ENCODER.c" \
 "../BPS/src/IMU.c" \
 "../BPS/src/MOTOR.c" \
+"../BPS/src/TRACK.c" \
 "../BPS/src/YAW_PID.c" 
 
 

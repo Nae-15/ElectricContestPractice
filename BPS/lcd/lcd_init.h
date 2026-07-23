@@ -3,7 +3,7 @@
 
 #include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\Board\board.h"
 
-#define USE_HORIZONTAL 3 //设置横屏或者竖屏显示 0或1为竖屏 2或3为横屏（旋转90度）
+#define USE_HORIZONTAL 2 //设置横屏或者竖屏显示 0或1为竖屏 2或3为横屏（旋转90度）
 
 
 #if USE_HORIZONTAL==0||USE_HORIZONTAL==1

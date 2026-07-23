@@ -1,4 +1,5 @@
 #include "KEY.h"
+/*
 uint8_t Key_Get(void)
 {
 	uint8_t i;
@@ -19,3 +20,4 @@ uint8_t Key_Get(void)
 	}
 	return 0;
 }
+*/

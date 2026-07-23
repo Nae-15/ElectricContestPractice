@@ -10,6 +10,7 @@
 "./BPS/src/IMU.o"
 "./BPS/src/KEY.o"
 "./BPS/src/MOTOR.o"
+"./BPS/src/TRACK.o"
 "./BPS/src/YAW_PID.o"
 -l"./device_linker.cmd"
 -ldevice.cmd.genlibs

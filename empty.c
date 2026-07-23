@@ -4,6 +4,7 @@
 #include "IMU.h"
 #include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\lcd\lcd.h"
 #include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\inc\MOTOR.h"
+#include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\inc\TRACK.h"
 
 typedef struct//车轮结构体
 {
@@ -31,6 +32,7 @@ Wheel Wheel_Left,Wheel_Right;
 #define Velocity_Scale 3000 //速度放大系数，将脉冲/tick转为整数级读数
 volatile int32_t Velocity_Counter;
 
+//-------------时间-----------------
 int time=0;
 
 //-----------路程-------------------
@@ -40,6 +42,7 @@ int32_t Distance;
 float PID_KP = 0.3f;    // 比例系数（配合前馈，只需小幅度纠偏）
 float PID_KI = 0.1f;    // 积分系数
 float PID_KD = 0.0f;    // 微分系数
+
 // 前馈系数：实测 PWM 125 → 速度 500，即 1 PWM = 4 速度单位
 #define VELOCITY_FEEDFORWARD 0.25f
 //PID输出限幅
@@ -65,7 +68,6 @@ uint8_t Circle_Count = 0;
 void ALL_Init(void);        //全局初始化
 void Velocity_Get(void);    //速度获取
 void Distance_Get(void);    //距离获取
-void Track_Get(void);       //获取循迹值
 static void PID_Get(Wheel *Wheel_Temp);  //PID计算算法
 void PID_Contorl(void);     //PID实际调用
 
@@ -91,11 +93,10 @@ int main(void)
         LCD_ShowIntNum(30, 50, Wheel_Right.Velocity, 5, RED, BLACK, 12);
         LCD_ShowIntNum(120, 50, Wheel_Right.PID_Output, 5, RED, BLACK, 12);
 
-
     }
 }
 
-void ALL_Init(void)
+void ALL_Init(void)//全局初始化
 {
     __enable_irq();//MSPM0 Boot ROM 冷启动后关闭了全局中断，启动代码未重新打开，加入 __enable_irq() 确保所有外设中断可用。
 
@@ -153,75 +154,9 @@ void Velocity_Get(void)//计算轮子速度
 void Distance_Get(void)//计算行驶距离
 {
     float Avg_Pulses =(float)(Wheel_Left.Encoder + Wheel_Right.Encoder)/2.0;//平均脉冲数
-    
+
     Distance = Avg_Pulses / Encoder_Pulses_Per_Revolution / Encoder_Gear_Ratio * 2 * Pi * Wheel_Radius; // 更新累计路程，单位为毫米
 }
-
-/*
-void Track_Get(void)
-{
-    uint8_t Left1=0,Left2=0,Left3=0,Middle1=0,Right1=0,Right2=0,Right3=0;
-   uint8_t Track_Count = 0;
-    // 读取PIN_1状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_1_PIN))
-    {
-        Left1 = 1;  // bit0置1，表示检测到黑线
-        Track_Count++;
-    }
-
-    // 读取PIN_2状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_2_PIN))
-    {
-        Left2 = 1;  // bit1置1，表示检测到黑线
-        Track_Count++;
-    }
-
-    // 读取PIN_3状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_3_PIN))
-    {
-        Left3 = 1;  // bit2置1，表示检测到黑线
-        Track_Count++;
-    }
-
-    // 读取PIN_4状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_4_PIN))
-    {
-        Middle1 = 1;  // bit3置1，表示检测到黑线
-        Track_Count++;
-    }
-
-    // 读取PIN_5状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_5_PIN))
-    {
-        Right1 = 1;  // bit4置1，表示检测到黑线
-        Track_Count++;
-    }
-
-    // 读取PIN_6状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_6_PIN))
-    {
-        Right2 = 1;  // bit5置1，表示检测到黑线
-        Track_Count++;
-    }
-
-    // 读取PIN_7状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_7_PIN))
-    {
-        Right3 = 1;  // bit6置1，表示检测到黑线
-        Track_Count++;
-    }
-
-    if(Track_Count == 0||Track_Count==7)
-    {
-        Track_Value=0;
-    }
-    else
-    {
-        Track_Value = (Left1*1+Left2*2+Left3*3+Middle1*4+Right1*5+Right2*6+Right3*7) *10 /Track_Count;
-        TRACK_LOST_Flag = TRACK_Not_LOST;
-    }
-}
-*/
 
 static void PID_Get(Wheel *Wheel_Temp)//PID计算
 {

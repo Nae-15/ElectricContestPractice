@@ -1,5 +1,5 @@
-#ifndef _HW_ENCODER_H_
-#define _HW_ENCODER_H_
+#ifndef _ENCODER_H_
+#define _ENCODER_H_
 
 #include "ti_msp_dl_config.h"
 
@@ -15,7 +15,6 @@ typedef struct
     int Count;         			//根据定时器时间更新的计数值
     ENCODER_DIR Direction;      //旋转方向
 } ENCODER;
-
 
 void Encoder_Init(void);
 void Encoder_Get(uint8_t Id, int *Count, ENCODER_DIR *Direction);

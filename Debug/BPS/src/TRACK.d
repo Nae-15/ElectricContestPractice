@@ -1,6 +1,7 @@
 # FIXED
 
-empty.o: ../empty.c \
+BPS/src/TRACK.o: ../BPS/src/TRACK.c \
+ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/TRACK.h \
  ti_msp_dl_config.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/msp/msp.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/DeviceFamily.h \
@@ -83,15 +84,8 @@ empty.o: ../empty.c \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_vref.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_wwdt.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_interrupt.h \
- E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/KEY.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/ENCODER.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/IMU.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/lcd/lcd.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/lcd/lcd_init.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/MOTOR.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/TRACK.h
+ E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h
+E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/TRACK.h:
 ti_msp_dl_config.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/msp/msp.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/DeviceFamily.h:
@@ -175,11 +169,3 @@ E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_vref.
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_wwdt.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_interrupt.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/KEY.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/ENCODER.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/IMU.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/lcd/lcd.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/lcd/lcd_init.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/MOTOR.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/TRACK.h:
