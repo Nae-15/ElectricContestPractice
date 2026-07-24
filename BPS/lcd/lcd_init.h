@@ -1,7 +1,7 @@
 #ifndef __LCD_INIT_H
 #define __LCD_INIT_H
 
-#include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\Board\board.h"
+#include "../Board/board.h"
 
 #define USE_HORIZONTAL 2 //设置横屏或者竖屏显示 0或1为竖屏 2或3为横屏（旋转90度）
 

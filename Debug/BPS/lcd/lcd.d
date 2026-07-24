@@ -1,7 +1,7 @@
 # FIXED
 
 BPS/lcd/lcd.o: ../BPS/lcd/lcd.c ../BPS/lcd/lcd.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h \
+ ../BPS/Board/board.h \
  ti_msp_dl_config.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/msp/msp.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/DeviceFamily.h \
@@ -87,7 +87,7 @@ BPS/lcd/lcd.o: ../BPS/lcd/lcd.c ../BPS/lcd/lcd.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h \
  ../BPS/lcd/lcd_init.h ../BPS/lcd/lcdfont.h
 ../BPS/lcd/lcd.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h:
+../BPS/Board/board.h:
 ti_msp_dl_config.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/msp/msp.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/DeviceFamily.h:

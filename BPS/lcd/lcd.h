@@ -1,7 +1,7 @@
 #ifndef __LCD_H
 #define __LCD_H		
 
-#include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\Board\board.h"
+#include "../Board/board.h"
 #include "lcd_init.h"
 
 void LCD_Fill(u16 xsta,u16 ysta,u16 xend,u16 yend,u16 color);//指定区域填充颜色
@@ -19,10 +19,9 @@ void LCD_ShowChinese32x32(u16 x,u16 y,const char *s,u16 fc,u16 bc,u8 sizey,u8 mo
 void LCD_ShowChar(u16 x,u16 y,u8 num,u16 fc,u16 bc,u8 sizey,u8 mode);//显示一个字符
 void LCD_ShowString(u16 x,u16 y,const char *p,u16 fc,u16 bc,u8 sizey,u8 mode);//显示字符串
 u32 mypow(u8 m,u8 n);//求幂
-void LCD_ShowIntNum(u16 x,u16 y,int16_t num,u8 len,u16 fc,u16 bc,u8 sizey);//显示整数变量
+void LCD_ShowIntNum(u16 x,u16 y,int32_t num,u8 len,u16 fc,u16 bc,u8 sizey);//显示整数变量
 void LCD_ShowBinNum(u16 x,u16 y,u8 num,u16 fc,u16 bc,u8 sizey);//显示8位二进制数
-void LCD_ShowFloatNum1(u16 x,u16 y,float num,u8 len,u16 fc,u16 bc,u8 sizey);
-void LCD_ShowFloatNum2(u16 x,u16 y,u16 num,u8 len,u16 fc,u16 bc,u8 sizey);//显示两位小数变量（整数，最后两位为小数位）
+void LCD_ShowFloatNum(u16 x,u16 y,float num,u8 len,u8 dec,u16 fc,u16 bc,u8 sizey);//显示小数变量（len=整数位数,dec=小数位数）
 
 void LCD_ShowPicture(u16 x,u16 y,u16 length,u16 width,const u8 pic[]);//显示图片
 

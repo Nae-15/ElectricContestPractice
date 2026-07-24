@@ -6,7 +6,7 @@
 #define KEY3 KEY_PIN__3_PIN
 
 #include "ti_msp_dl_config.h"
-#include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\Board\board.h"
+#include "../Board/board.h"
 
 uint8_t Key_Get(void);
 

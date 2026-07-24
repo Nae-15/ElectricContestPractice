@@ -2,9 +2,9 @@
 #include "KEY.h"
 #include "ENCODER.h"
 #include "IMU.h"
-#include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\lcd\lcd.h"
-#include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\inc\MOTOR.h"
-#include "E:\Code\Project-MSPM0G3507\ElcContestTest\BPS\inc\TRACK.h"
+#include "BPS/lcd/lcd.h"
+#include "BPS/inc/MOTOR.h"
+#include "BPS/inc/TRACK.h"
 
 typedef struct//车轮结构体
 {
@@ -38,10 +38,13 @@ int time=0;
 
 //-----------路程-------------------
 int32_t Distance;
+//-----------循迹-------------------
+uint8_t Track_Value;
+
 
 //-----------PID--------------------
 float PID_KP = 0.05f;   // 比例系数（12V响应太快，极保守防超调）
-float PID_KI = 0.05f;   // 积分系数（慢速积分，稳步收敛）
+float PID_KI = 0.02f;   // 积分系数（极慢积分，减少稳态微振）
 float PID_KD = 0.0f;    // 微分系数
 
 // 前馈系数：12V供电，左右独立校准（右比左快2.72%，左需补偿）
@@ -69,7 +72,9 @@ uint8_t Circle_Count = 0;
 
 void System_Init(void);     //系统初始化
 void Data_Init(void);       //数据初始化
+void Show_Init(void);       //显示初始化
 void ALL_Init(void);        //全局初始化
+void Show_Update(void);
 void Velocity_Get(void);    //速度获取
 void Distance_Get(void);    //距离获取
 static void PID_Get(Wheel *Wheel_Temp);  //PID计算算法
@@ -80,23 +85,21 @@ int main(void)
     ALL_Init();
     Wheel_Left.Velocity_Target=2000;
     Wheel_Right.Velocity_Target=2000;
-
+    int a=0;
     while(1) 
     {   
-        Velocity_Get();
+
+        Show_Update();
         if(time>Velocity_Interval)
         {
+            Velocity_Get();
             PID_Contorl();
-            lc_printf("%f\n",Wheel_Right.Velocity);//串口0发送
             AO_Control(1,Wheel_Left.PID_Output);
             BO_Control(1,Wheel_Right.PID_Output);
-   
+            lc_printf("%f\n",Wheel_Left.Velocity);//串口0发送
         }
-
-        LCD_ShowIntNum(30, 30, Wheel_Left.Velocity, 5, GREEN, BLACK, 12);
-        LCD_ShowIntNum(120, 30, Wheel_Left.PID_Output, 5, GREEN, BLACK, 12);
-        LCD_ShowIntNum(30, 50, Wheel_Right.Velocity, 5, RED, BLACK, 12);
-        LCD_ShowIntNum(120, 50, Wheel_Right.PID_Output, 5, RED, BLACK, 12);
+        a=Key_Get();
+        if(a){Wheel_Left.Velocity_Target=2500;}
 
     }
 }
@@ -133,10 +136,41 @@ void Data_Init(void)//数据初始化
     Wheel_Right.Encoder_Last = Wheel_Right.Encoder;
 }
 
+void Show_Init(void)//显示初始化
+{
+    LCD_ShowString(30,20,"Left_E:",RED,BLACK,16,0);
+    LCD_ShowString(150,20,"Left_E:",GREEN,BLACK,16,0); 
+    LCD_ShowString(30,40,"Left_V:",RED,BLACK,16,0);
+    LCD_ShowString(150,40,"Left_R:",GREEN,BLACK,16,0);
+    LCD_ShowString(30,60,"Left_O:",RED,BLACK,16,0);
+    LCD_ShowString(150,60,"Left_O:",GREEN,BLACK,16,0); 
+    LCD_ShowString(30,80,"KP:",BLUE,BLACK,16,0);
+    LCD_ShowString(100,80,"KI:",BLUE,BLACK,16,0);
+    LCD_ShowString(170,80,"KD:",BLUE,BLACK,16,0);
+    LCD_ShowString(30,100,"TRACK:",WHITE,BLACK,16,0); 
+    LCD_ShowString(120,100,"Distance:",WHITE,BLACK,16,0); 
+}
+
 void ALL_Init(void)//全局初始化
 {
     System_Init();
     Data_Init();
+    Show_Init();
+}
+
+void Show_Update(void)
+{
+    LCD_ShowIntNum(100, 20, Wheel_Left.Encoder, 5, RED, BLACK, 16);
+    LCD_ShowIntNum(220, 20, Wheel_Right.Encoder, 5, GREEN, BLACK, 16);
+    LCD_ShowIntNum(100, 40, Wheel_Left.Velocity, 5, RED, BLACK, 16);
+    LCD_ShowIntNum(220, 40, Wheel_Right.Velocity, 5, GREEN, BLACK, 16);
+    LCD_ShowIntNum(100, 60, Wheel_Left.PID_Output, 5, RED, BLACK, 16);
+    LCD_ShowIntNum(220, 60, Wheel_Right.PID_Output, 5, GREEN, BLACK, 16); 
+    LCD_ShowFloatNum(60,80,PID_KP,1,2,BLUE,BLACK,16);
+    LCD_ShowFloatNum(130,80,PID_KI,1,2,BLUE,BLACK,16);
+    LCD_ShowFloatNum(200,80,PID_KD,1,2,BLUE,BLACK,16);
+    LCD_ShowIntNum(90, 100, Track_Value , 2, WHITE, BLACK, 16);
+    LCD_ShowIntNum(200, 100, Distance, 6, WHITE, BLACK, 16);
 }
 
 void Velocity_Get(void)//计算轮子速度

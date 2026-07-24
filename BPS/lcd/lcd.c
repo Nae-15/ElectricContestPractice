@@ -479,12 +479,12 @@ u32 mypow(u8 m,u8 n)
                 sizey 字号
       返回值：  无
 ******************************************************************************/
-void LCD_ShowIntNum(u16 x,u16 y,int16_t num,u8 len,u16 fc,u16 bc,u8 sizey)
+void LCD_ShowIntNum(u16 x,u16 y,int32_t num,u8 len,u16 fc,u16 bc,u8 sizey)
 {
 	u8 t,temp;
 	u8 enshow=0;
 	u8 sizex=sizey/2;
-	int16_t abs_num;
+	int32_t abs_num;
 	if(num<0)
 	{
 		abs_num = -num;
@@ -524,48 +524,36 @@ void LCD_ShowIntNum(u16 x,u16 y,int16_t num,u8 len,u16 fc,u16 bc,u8 sizey)
 } 
 
 /******************************************************************************
-      函数说明：显示两位小数变量
+      函数说明：显示小数变量
       入口数据：x,y显示坐标
                 num 要显示小数变量
-                len 要显示的位数
+                len 整数位数
+                dec 小数位数（例：len=1,dec=2显示"X.XX"，len=1,dec=4显示"X.XXXX"）
                 fc 字的颜色
                 bc 字的背景色
                 sizey 字号
       返回值：  无
 ******************************************************************************/
-void LCD_ShowFloatNum1(u16 x,u16 y,float num,u8 len,u16 fc,u16 bc,u8 sizey)
-{         	
+void LCD_ShowFloatNum(u16 x,u16 y,float num,u8 len,u8 dec,u16 fc,u16 bc,u8 sizey)
+{
 	u8 t,temp,sizex;
-	u16 num1;
+	u32 num1;
+	u8 total;
+	u32 mult;
 	sizex=sizey/2;
-	num1=num*100;
-	for(t=0;t<len;t++)
+	mult=mypow(10,dec);
+	num1=(u32)(num*mult);
+	total=len+dec;
+	for(t=0;t<total;t++)
 	{
-		temp=(num1/mypow(10,len-t-1))%10;
-		if(t==(len-2))
+		temp=(num1/mypow(10,total-t-1))%10;
+		if(t==len)
 		{
-			LCD_ShowChar(x+(len-2)*sizex,y,'.',fc,bc,sizey,0);
+			LCD_ShowChar(x+len*sizex,y,'.',fc,bc,sizey,0);
 			t++;
-			len+=1;
+			total++;
 		}
-	 	LCD_ShowChar(x+t*sizex,y,temp+48,fc,bc,sizey,0);
-	}
-}
-
-void LCD_ShowFloatNum2(u16 x,u16 y,u16 num,u8 len,u16 fc,u16 bc,u8 sizey)
-{         	
-	u8 t,temp,sizex;
-	sizex=sizey/2;
-	for(t=0;t<len;t++)
-	{
-		temp=(num/mypow(10,len-t-1))%10;
-		if(t==(len-2))
-		{
-			LCD_ShowChar(x+(len-2)*sizex,y,'.',fc,bc,sizey,0);
-			t++;
-			len+=1;
-		}
-	 	LCD_ShowChar(x+t*sizex,y,temp+48,fc,bc,sizey,0);
+	 	LCD_ShowChar(x+t*sizex,y,temp+'0',fc,bc,sizey,0);
 	}
 }
 
