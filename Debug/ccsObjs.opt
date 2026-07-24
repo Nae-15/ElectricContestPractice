@@ -12,6 +12,7 @@
 "./BPS/src/MOTOR.o"
 "./BPS/src/TRACK.o"
 "./BPS/src/YAW_PID.o"
+"./BPS/src/ZIGBEE.o"
 -l"./device_linker.cmd"
 -ldevice.cmd.genlibs
 -llibc.a

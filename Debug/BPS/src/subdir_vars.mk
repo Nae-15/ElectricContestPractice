@@ -12,7 +12,8 @@ C_SRCS += \
 ../BPS/src/KEY.c \
 ../BPS/src/MOTOR.c \
 ../BPS/src/TRACK.c \
-../BPS/src/YAW_PID.c 
+../BPS/src/YAW_PID.c \
+../BPS/src/ZIGBEE.c 
 
 C_DEPS += \
 ./BPS/src/BLINK.d \
@@ -21,7 +22,8 @@ C_DEPS += \
 ./BPS/src/KEY.d \
 ./BPS/src/MOTOR.d \
 ./BPS/src/TRACK.d \
-./BPS/src/YAW_PID.d 
+./BPS/src/YAW_PID.d \
+./BPS/src/ZIGBEE.d 
 
 OBJS += \
 ./BPS/src/BLINK.o \
@@ -30,7 +32,8 @@ OBJS += \
 ./BPS/src/KEY.o \
 ./BPS/src/MOTOR.o \
 ./BPS/src/TRACK.o \
-./BPS/src/YAW_PID.o 
+./BPS/src/YAW_PID.o \
+./BPS/src/ZIGBEE.o 
 
 OBJS__QUOTED += \
 "BPS\src\BLINK.o" \
@@ -39,7 +42,8 @@ OBJS__QUOTED += \
 "BPS\src\KEY.o" \
 "BPS\src\MOTOR.o" \
 "BPS\src\TRACK.o" \
-"BPS\src\YAW_PID.o" 
+"BPS\src\YAW_PID.o" \
+"BPS\src\ZIGBEE.o" 
 
 C_DEPS__QUOTED += \
 "BPS\src\BLINK.d" \
@@ -48,7 +52,8 @@ C_DEPS__QUOTED += \
 "BPS\src\KEY.d" \
 "BPS\src\MOTOR.d" \
 "BPS\src\TRACK.d" \
-"BPS\src\YAW_PID.d" 
+"BPS\src\YAW_PID.d" \
+"BPS\src\ZIGBEE.d" 
 
 C_SRCS__QUOTED += \
 "../BPS/src/BLINK.c" \
@@ -56,6 +61,7 @@ C_SRCS__QUOTED += \
 "../BPS/src/IMU.c" \
 "../BPS/src/MOTOR.c" \
 "../BPS/src/TRACK.c" \
-"../BPS/src/YAW_PID.c" 
+"../BPS/src/YAW_PID.c" \
+"../BPS/src/ZIGBEE.c" 
 
 

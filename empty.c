@@ -1,10 +1,11 @@
 #include "ti_msp_dl_config.h"
-#include "KEY.h"
-#include "ENCODER.h"
-#include "IMU.h"
+#include "BPS/inc/KEY.h"
+#include "BPS/inc/ENCODER.h"
+#include "BPS/inc/IMU.h"
 #include "BPS/lcd/lcd.h"
 #include "BPS/inc/MOTOR.h"
 #include "BPS/inc/TRACK.h"
+#include "BPS/inc/ZIGBEE.h"
 
 typedef struct//车轮结构体
 {
@@ -80,9 +81,9 @@ int main(void)
     ALL_Init();
     Wheel_Left.Velocity_Target=2000;
     Wheel_Right.Velocity_Target=2000;
-    while(1) 
-    {   
-
+    
+    while(1)
+    {
         Show_Update();
         if(time>Velocity_Interval)
         {
@@ -114,8 +115,11 @@ void System_Init(void)//系统初始化
     LCD_Fill(0, 0, 300, LCD_H, BLACK);
 
     //IMU占用串口0
-    IMU_Init();
-    sendCaliYawCommand();
+    //IMU_Init();
+    //sendCaliYawCommand();
+
+    //Zigbee占用串口1
+    //Zigbee_Init();
 }
 
 void Data_Init(void)//数据初始化

@@ -21,23 +21,7 @@ struct SQuat stcQuat = {0};
 
 void IMU_Init(void)
 {
-    // 清空上电期间IMU灌入UART RX FIFO的垃圾数据
-    while (DL_UART_Main_isRXFIFOEmpty(UART_0_INST) == false) {
-        DL_UART_Main_receiveData(UART_0_INST);
-    }
-    // 清除所有UART中断标志（溢出、帧错误等），防止UART硬件锁死
-    DL_UART_Main_clearInterruptStatus(UART_0_INST,
-        DL_UART_MAIN_INTERRUPT_RX |
-        DL_UART_MAIN_INTERRUPT_OVERRUN_ERROR |
-        DL_UART_MAIN_INTERRUPT_FRAMING_ERROR |
-        DL_UART_MAIN_INTERRUPT_PARITY_ERROR |
-        DL_UART_MAIN_INTERRUPT_BREAK_ERROR |
-        DL_UART_MAIN_INTERRUPT_RX_TIMEOUT_ERROR |
-        DL_UART_MAIN_INTERRUPT_NOISE_ERROR);
-    // 清除NVIC挂起的中断
-    NVIC_ClearPendingIRQ(UART_0_INST_INT_IRQN);
-    // 使能串口中断
-    NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
+    UART0_Init();
 }
 
 /******************************************************************************
@@ -341,7 +325,7 @@ uint8_t BIAS_CAL[5] = {0x55, 0xAA, 0x0A, 0x01, 0x00};
 ******************************************************************************/
 void sendCaliYawCommand(void)
 {
-   uart0_send_SendByte(Key, 5);
+    uart0_send_SendByte(Key, 5);
 	Delay_ms(100);
 	uart0_send_SendByte(Yaw_Zero, 5);
 	Delay_ms(100);
