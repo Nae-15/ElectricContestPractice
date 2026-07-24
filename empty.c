@@ -38,9 +38,16 @@ int time=0;
 
 //-----------路程-------------------
 int32_t Distance;
+
 //-----------循迹-------------------
 uint8_t Track_Value;
+#define TRACK_CENTER      40.0f     // 7路传感器中心加权值（传感器4居中）
+#define TRACK_KP          35.0f     // 寻线比例系数（速度差/偏差单位）
 
+#define TRACK_BASE_SPEED  1500.0f   // 寻线基础速度
+#define TRACK_LOST_SPEED  700.0f    // 丢线时降速搜索
+#define TRACK_MAX_SPEED   2500.0f   // 寻线最大速度限幅
+#define TRACK_MIN_SPEED   300.0f    // 寻线最小速度限幅（防堵转）
 
 //-----------PID--------------------
 float PID_KP = 0.05f;   // 比例系数（12V响应太快，极保守防超调）
@@ -57,49 +64,36 @@ float PID_KD = 0.0f;    // 微分系数
 #define PID_Integral_Max 50.0f  // 积分最大值（小幅慢调）
 #define PID_Integral_Min -50.0f // 积分最小值（对称限幅）
 
-/*
-//单个速度单位间隔（单位：mm/s）
-#define STOP_VELOCITY 0.0f
-#define MIDDLE_VELOCITY 600.0f
-#define VELOCITY_Step 70.0f
-float VELOCITY_JianGe = 1.0f;
-
-double Distance = 0.0;//单位mm
-double Target_Distance = 3500.0;//上次累计路程，单位mm
-uint8_t Target_Circle_Count = 0;
-uint8_t Circle_Count = 0;
-*/
-
 void System_Init(void);     //系统初始化
 void Data_Init(void);       //数据初始化
 void Show_Init(void);       //显示初始化
 void ALL_Init(void);        //全局初始化
-void Show_Update(void);
+void Show_Update(void);     //显示更新
 void Velocity_Get(void);    //速度获取
 void Distance_Get(void);    //距离获取
 static void PID_Get(Wheel *Wheel_Temp);  //PID计算算法
 void PID_Contorl(void);     //PID实际调用
+void Mode_Tracking(void);   //沿线循迹模式
 
 int main(void)
 {   
     ALL_Init();
     Wheel_Left.Velocity_Target=2000;
     Wheel_Right.Velocity_Target=2000;
-    int a=0;
     while(1) 
     {   
 
         Show_Update();
         if(time>Velocity_Interval)
         {
+            Track_Get();
+            Mode_Tracking();
             Velocity_Get();
             PID_Contorl();
             AO_Control(1,Wheel_Left.PID_Output);
             BO_Control(1,Wheel_Right.PID_Output);
-            lc_printf("%f\n",Wheel_Left.Velocity);//串口0发送
+            //lc_printf("%f\n",Wheel_Left.Velocity);//串口0发送
         }
-        a=Key_Get();
-        if(a){Wheel_Left.Velocity_Target=2500;}
 
     }
 }
@@ -270,6 +264,55 @@ void PID_Contorl(void)//PID控制
 {
     PID_Get(&Wheel_Left);
     PID_Get(&Wheel_Right);
+}
+
+void Mode_Tracking(void)//沿线循迹
+{
+    static float Last_Error = 0;       // 上一拍偏差，用于丢线恢复
+
+    Track_Value = Track_Get();         // 读取7路循迹传感器加权位置
+
+    if (Track_Value == 0)              // 丢线：所有传感器均未检测到黑线
+    {
+        //降速并以最后一次偏差方向持续转向，尝试找回线
+        float Lost_Error = Last_Error;
+        if (Lost_Error > TRACK_CENTER) Lost_Error = TRACK_CENTER;
+        if (Lost_Error < -TRACK_CENTER) Lost_Error = -TRACK_CENTER;
+
+        Wheel_Left.Velocity_Target  = TRACK_LOST_SPEED + Lost_Error * TRACK_KP;
+        Wheel_Right.Velocity_Target = TRACK_LOST_SPEED - Lost_Error * TRACK_KP;
+    }
+    else
+    {
+        //计算偏差：Track_Value - TRACK_CENTER
+        //正 → 黑线偏右 → 右轮减速、左轮加速 → 车向右转
+        //负 → 黑线偏左 → 左轮减速、右轮加速 → 车向左转
+        float Error = (float)Track_Value - TRACK_CENTER;
+
+        Last_Error = Error;// 记录偏差，供丢线时参考
+
+        // 差速驱动：基础速度 ± 偏差修正
+        Wheel_Left.Velocity_Target  = TRACK_BASE_SPEED + Error * TRACK_KP;
+        Wheel_Right.Velocity_Target = TRACK_BASE_SPEED - Error * TRACK_KP;
+
+        // 速度限幅，防止极端偏差导致一侧停转或超速
+        if(Wheel_Left.Velocity_Target > TRACK_MAX_SPEED)
+        {
+            Wheel_Left.Velocity_Target=TRACK_MAX_SPEED;
+        }
+        if(Wheel_Left.Velocity_Target < TRACK_MIN_SPEED)
+        {
+            Wheel_Left.Velocity_Target = TRACK_MIN_SPEED;
+        } 
+        if (Wheel_Right.Velocity_Target > TRACK_MAX_SPEED) 
+        {
+            Wheel_Right.Velocity_Target = TRACK_MAX_SPEED;
+        }
+        if (Wheel_Right.Velocity_Target < TRACK_MIN_SPEED) 
+        {
+            Wheel_Right.Velocity_Target = TRACK_MIN_SPEED;
+        }
+    }
 }
 
 void TIMER_TICK_INST_IRQHandler(void)
