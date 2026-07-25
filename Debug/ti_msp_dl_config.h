@@ -129,18 +129,18 @@ extern "C" {
 #define UART_0_IBRD_4_MHZ_115200_BAUD                                        (2)
 #define UART_0_FBRD_4_MHZ_115200_BAUD                                       (11)
 /* Defines for UART_1 */
-#define UART_1_INST                                                        UART1
+#define UART_1_INST                                                        UART2
 #define UART_1_INST_FREQUENCY                                            4000000
-#define UART_1_INST_IRQHandler                                  UART1_IRQHandler
-#define UART_1_INST_INT_IRQN                                      UART1_INT_IRQn
+#define UART_1_INST_IRQHandler                                  UART2_IRQHandler
+#define UART_1_INST_INT_IRQN                                      UART2_INT_IRQn
 #define GPIO_UART_1_RX_PORT                                                GPIOA
 #define GPIO_UART_1_TX_PORT                                                GPIOA
-#define GPIO_UART_1_RX_PIN                                        DL_GPIO_PIN_18
-#define GPIO_UART_1_TX_PIN                                        DL_GPIO_PIN_17
-#define GPIO_UART_1_IOMUX_RX                                     (IOMUX_PINCM40)
-#define GPIO_UART_1_IOMUX_TX                                     (IOMUX_PINCM39)
-#define GPIO_UART_1_IOMUX_RX_FUNC                      IOMUX_PINCM40_PF_UART1_RX
-#define GPIO_UART_1_IOMUX_TX_FUNC                      IOMUX_PINCM39_PF_UART1_TX
+#define GPIO_UART_1_RX_PIN                                        DL_GPIO_PIN_24
+#define GPIO_UART_1_TX_PIN                                        DL_GPIO_PIN_23
+#define GPIO_UART_1_IOMUX_RX                                     (IOMUX_PINCM54)
+#define GPIO_UART_1_IOMUX_TX                                     (IOMUX_PINCM53)
+#define GPIO_UART_1_IOMUX_RX_FUNC                      IOMUX_PINCM54_PF_UART2_RX
+#define GPIO_UART_1_IOMUX_TX_FUNC                      IOMUX_PINCM53_PF_UART2_TX
 #define UART_1_BAUD_RATE                                                (115200)
 #define UART_1_IBRD_4_MHZ_115200_BAUD                                        (2)
 #define UART_1_FBRD_4_MHZ_115200_BAUD                                       (11)

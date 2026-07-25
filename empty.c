@@ -1,10 +1,12 @@
 #include "ti_msp_dl_config.h"
+#include <stdio.h>
 #include "BPS/inc/KEY.h"
 #include "BPS/inc/ENCODER.h"
 #include "BPS/inc/IMU.h"
 #include "BPS/lcd/lcd.h"
 #include "BPS/inc/MOTOR.h"
 #include "BPS/inc/TRACK.h"
+#include "BPS/inc/YAW_PID.h"
 #include "BPS/inc/ZIGBEE.h"
 
 typedef struct//车轮结构体
@@ -50,6 +52,14 @@ uint8_t Track_Value;
 #define TRACK_MAX_SPEED   2500.0f   // 寻线最大速度限幅
 #define TRACK_MIN_SPEED   300.0f    // 寻线最小速度限幅（防堵转）
 
+//-----------角度环--------------------
+float Yaw_Value;
+#define YAW_KP            1.5f      // 角度环比例系数（降低防振荡）
+#define YAW_KI            0.0f      // 角度环积分系数（原地调角先关积分）
+#define YAW_KD            8.0f      // 角度环微分系数（加大阻尼抑制过冲）
+#define YAW_OUTPUT_MAX    150.0f    // 角度环输出限幅（收窄范围）
+#define YAW_REVERSE       0         // 方向反转：若小车越调越偏，改为1
+
 //-----------PID--------------------
 float PID_KP = 0.05f;   // 比例系数（12V响应太快，极保守防超调）
 float PID_KI = 0.02f;   // 积分系数（极慢积分，减少稳态微振）
@@ -75,25 +85,46 @@ void Distance_Get(void);    //距离获取
 static void PID_Get(Wheel *Wheel_Temp);  //PID计算算法
 void PID_Contorl(void);     //PID实际调用
 void Mode_Tracking(void);   //沿线循迹模式
+void Mode_AngleHold(void);  //角度环维持模式
 
 int main(void)
-{   
+{
     ALL_Init();
     Wheel_Left.Velocity_Target=2000;
     Wheel_Right.Velocity_Target=2000;
-    
+
+    uint8_t Run_Mode = 1;   // 0=循迹模式  1=角度维持模式
+
     while(1)
     {
         Show_Update();
         if(time>Velocity_Interval)
         {
+            Yaw_Value=Yaw();
             Track_Get();
-            Mode_Tracking();
             Velocity_Get();
-            PID_Contorl();
-            AO_Control(1,Wheel_Left.PID_Output);
-            BO_Control(1,Wheel_Right.PID_Output);
-            //lc_printf("%f\n",Wheel_Left.Velocity);//串口0发送
+
+            if (Run_Mode == 0)           // 循迹模式
+            {
+                Mode_Tracking();
+                PID_Contorl();
+                AO_Control(1, Wheel_Left.PID_Output);
+                BO_Control(1, Wheel_Right.PID_Output);
+            }
+            else            // 角度维持模式（Mode_AngleHold内部直接控PWM）
+            {
+                Mode_AngleHold();
+            }
+
+            // Zigbee串口1发送: Yaw(3位), 左轮速度(4位), 右轮速度(4位)
+            {
+                char buf[64];
+                sprintf(buf, "%.0f,%.0f,%.0f\n",
+                        Yaw_Value,
+                        Wheel_Left.Velocity,
+                        Wheel_Right.Velocity);
+                uart1_sendString(buf);
+            }
         }
 
     }
@@ -115,8 +146,13 @@ void System_Init(void)//系统初始化
     LCD_Fill(0, 0, 300, LCD_H, BLACK);
 
     //IMU占用串口0
-    //IMU_Init();
-    //sendCaliYawCommand();
+    IMU_Init();
+    sendCaliYawCommand();
+
+    //角度环初始化：锁定0°航向
+    YawPID_Init(YAW_KP, YAW_KI, YAW_KD);
+    YawPID_SetTarget(0.0f);
+    YawPID_Enable(true);
 
     //Zigbee占用串口1
     //Zigbee_Init();
@@ -147,6 +183,8 @@ void Show_Init(void)//显示初始化
     LCD_ShowString(170,80,"KD:",BLUE,BLACK,16,0);
     LCD_ShowString(30,100,"TRACK:",WHITE,BLACK,16,0); 
     LCD_ShowString(120,100,"Distance:",WHITE,BLACK,16,0); 
+    LCD_ShowString(30,120,"Yaw:",WHITE,BLACK,16,0); 
+
 }
 
 void ALL_Init(void)//全局初始化
@@ -169,6 +207,10 @@ void Show_Update(void)
     LCD_ShowFloatNum(200,80,PID_KD,1,2,BLUE,BLACK,16);
     LCD_ShowIntNum(90, 100, Track_Value , 2, WHITE, BLACK, 16);
     LCD_ShowIntNum(200, 100, Distance, 6, WHITE, BLACK, 16);
+    LCD_ShowIntNum(70, 120, Yaw_Value, 6, WHITE, BLACK, 16);
+    LCD_ShowFloatNum(30,140,zigbee_data[0],1,2,BLUE,BLACK,16);
+    LCD_ShowFloatNum(100,140,zigbee_data[1],1,3,BLUE,BLACK,16);
+    LCD_ShowFloatNum(170,140,zigbee_data[2],1,3,BLUE,BLACK,16);
 }
 
 void Velocity_Get(void)//计算轮子速度
@@ -316,6 +358,56 @@ void Mode_Tracking(void)//沿线循迹
         {
             Wheel_Right.Velocity_Target = TRACK_MIN_SPEED;
         }
+    }
+}
+
+//-----------角度维持直接PWM参数-----------
+#define ANGLE_PWM_MIN     130       // 角度修正最低PWM（降低防过冲）
+#define ANGLE_PWM_MAX     400       // 角度修正最高PWM
+#define ANGLE_DEADBAND     2.0f     // 角度死区（±2°内不调整）
+
+void Mode_AngleHold(void)//角度环维持：直接控PWM，一轮动一轮停，原地调角
+{
+    static float last_sign = 0;     // 上一拍输出方向
+
+    YawPID_Compute();
+    float out = Yaw_Circle.Output;          // >0需右转，<0需左转
+
+#if YAW_REVERSE
+    out = -out;                              // 方向反转
+#endif
+
+    // 方向过零 → 清积分，防过冲
+    if ((last_sign > 0.0f && out < 0.0f) ||
+        (last_sign < 0.0f && out > 0.0f))
+    {
+        YawPID_ResetIntegral();
+    }
+    last_sign = out;
+
+    // 死区：±2°内停转
+    float abs_out = (out > 0.0f) ? out : -out;
+    if (abs_out < ANGLE_DEADBAND)
+    {
+        AO_Control(1, 0);
+        BO_Control(1, 0);
+        return;
+    }
+
+    // 映射 |Output| → PWM
+    uint32_t pwm = (uint32_t)(ANGLE_PWM_MIN +
+        (abs_out / YAW_OUTPUT_MAX) * (ANGLE_PWM_MAX - ANGLE_PWM_MIN));
+    if (pwm > ANGLE_PWM_MAX) pwm = ANGLE_PWM_MAX;
+
+    if (out > 0.0f)      // 右转：左轮前进，右轮停
+    {
+        AO_Control(1, pwm);
+        BO_Control(1, 0);
+    }
+    else                 // 左转：右轮前进，左轮停
+    {
+        AO_Control(1, 0);
+        BO_Control(1, pwm);
     }
 }
 

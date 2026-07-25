@@ -85,7 +85,10 @@ BPS/src/ZIGBEE.o: ../BPS/src/ZIGBEE.c \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_vref.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_wwdt.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_interrupt.h \
- E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h
+ E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h \
+ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/lcd/lcd.h \
+ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h \
+ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/lcd/lcd_init.h
 E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/ZIGBEE.h:
 E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h:
 ti_msp_dl_config.h:
@@ -171,3 +174,6 @@ E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_vref.
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_wwdt.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_interrupt.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h:
+E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/lcd/lcd.h:
+E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h:
+E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/lcd/lcd_init.h:

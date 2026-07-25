@@ -88,7 +88,8 @@ empty.o: ../empty.c \
  ../BPS/inc/IMU.h \
  E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h \
  ../BPS/lcd/lcd.h ../BPS/Board/board.h ../BPS/lcd/lcd_init.h \
- ../BPS/inc/MOTOR.h ../BPS/inc/TRACK.h ../BPS/inc/ZIGBEE.h
+ ../BPS/inc/MOTOR.h ../BPS/inc/TRACK.h ../BPS/inc/YAW_PID.h \
+ ../BPS/inc/ZIGBEE.h
 ti_msp_dl_config.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/msp/msp.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/DeviceFamily.h:
@@ -182,4 +183,5 @@ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h:
 ../BPS/lcd/lcd_init.h:
 ../BPS/inc/MOTOR.h:
 ../BPS/inc/TRACK.h:
+../BPS/inc/YAW_PID.h:
 ../BPS/inc/ZIGBEE.h:

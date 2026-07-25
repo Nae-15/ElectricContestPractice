@@ -1,179 +1,121 @@
 #include "YAW_PID.h"
 #include "IMU.h"
 
-/*============================================================================
- * 全局实例
- *===========================================================================*/
+Yaw_Control Yaw_Circle;  // 全局角度环控制器
 
-YawPID_t gYawPID;  // 全局角度环控制器
-
-/*============================================================================
- * 内部辅助函数
- *===========================================================================*/
-
-/**
- * @brief 归一化角度到 [-180.0f, 180.0f) 区间
- *
- * 对IMU输出的 ±180° 环绕进行处理，确保任意角度值落回标准区间。
- */
-float YawPID_NormalizeAngle(float angle)
+void YawPID_Init(float KP, float KI, float KD)//初始化角度环控制,默认开启
 {
-    /* 使用 while 循环处理超过一圈的极端情况 */
-    while (angle > 180.0f)
-    {
-        angle -= 360.0f;
-    }
-    while (angle < -180.0f)
-    {
-        angle += 360.0f;
-    }
-    return angle;
-}
+    Yaw_Circle.Yaw_Target   = 0.0f;
+    Yaw_Circle.Yaw          = 0.0f;
+    Yaw_Circle.Error        = 0.0f;
+    Yaw_Circle.LastError    = 0.0f;
+    Yaw_Circle.Integral     = 0.0f;
+    Yaw_Circle.Output       = 0.0f;
 
-/**
- * @brief 计算最短路径角度误差
- *
- * 目标角 - 当前角，归一化到 (-180°, 180°]，
- * 正值表示需要向右转（CW），负值表示需要向左转（CCW）。
- */
-float YawPID_AngleError(float target, float current)
-{
-    /* 先将目标归一到标准区间 */
-    float t = YawPID_NormalizeAngle(target);
-    float c = YawPID_NormalizeAngle(current);
-
-    /* 计算原始差值 */
-    float error = t - c;
-
-    /* 折到最短路径: -180° ~ +180° */
-    if (error > 180.0f)
-    {
-        error -= 360.0f;
-    }
-    else if (error < -180.0f)
-    {
-        error += 360.0f;
-    }
-
-    return error;
-}
-
-/*============================================================================
- * 公开接口实现
- *===========================================================================*/
-
-/**
- * @brief 初始化角度环PID控制器
- *
- * @param kp  比例系数 — 角度偏差 1° 产生的差速量
- * @param ki  积分系数 — 用于消除稳态误差（如地面不平导致的偏航）
- * @param kd  微分系数 — 抑制超调和振荡（利用IMU角速度可提前抑制）
- */
-void YawPID_Init(float kp, float ki, float kd)
-{
-    gYawPID.Target       = 0.0f;
-    gYawPID.Current      = 0.0f;
-    gYawPID.Error        = 0.0f;
-    gYawPID.LastError    = 0.0f;
-    gYawPID.Integral     = 0.0f;
-    gYawPID.Output       = 0.0f;
-
-    gYawPID.Kp           = kp;
-    gYawPID.Ki           = ki;
-    gYawPID.Kd           = kd;
+    Yaw_Circle.KP           = KP;
+    Yaw_Circle.KI           = KI;
+    Yaw_Circle.KD           = KD;
 
     /* 默认限幅 — 角度环输出不宜过大，避免剧烈转向导致翻车或甩尾 */
-    gYawPID.IntegralMax  = 100.0f;   // 积分上限
-    gYawPID.OutputMax    = 300.0f;   // 输出差速上限（叠加到速度环）
+    Yaw_Circle.Integral_Max  = 100.0f;   // 积分上限
+    Yaw_Circle.Output_Max    = 300.0f;   // 输出差速上限（叠加到速度环）
 
-    gYawPID.Enabled      = true;
+    Yaw_Circle.Enable_Flag   = 1;
 }
 
-/**
- * @brief 更新目标Yaw角
- */
-void YawPID_SetTarget(float target)
+void YawPID_Enable(bool Enable)//启用或关闭角度环
 {
-    gYawPID.Target = YawPID_NormalizeAngle(target);
-}
-
-/**
- * @brief 核心：角度环PID计算
- *
- * 每个控制周期调用一次，内部完成：
- *  1) 从 IMU 读取当前 Yaw
- *  2) 计算最短路径角度误差
- *  3) PID 运算 (含抗饱和与限幅)
- *  4) 输出差速值到 gYawPID.Output
- */
-void YawPID_Compute(void)
-{
-    /* 控制器关闭时输出清零 */
-    if (!gYawPID.Enabled)
+    Yaw_Circle.Enable_Flag = Enable;
+    if (!Enable)
     {
-        gYawPID.Output   = 0.0f;
-        gYawPID.Integral = 0.0f;
-        return;
+        Yaw_Circle.Output   = 0.0f;
+        Yaw_Circle.Integral = 0.0f;
+    }
+}
+
+void YawPID_SetTarget(float Target)//设置航向角目标值
+{
+    Yaw_Circle.Yaw_Target = Target;
+}
+
+void YawPID_ResetIntegral(void)//重置积分累计,以下场景应调用此函数：1目标Yaw角发生大的跳变 2小车被手动推偏后重新启用角度环 3检测到外部干扰导致积分异常积累
+{
+    Yaw_Circle.Integral = 0.0f;
+}
+
+float YawPID_AngleError(float Target, float Current)//计算最短路径角度误差（陀螺仪:左+右-），正值需右转(CW)，负值需左转(CCW)
+{
+    float Error = Current - Target;
+    if (Error > 180.0f)
+    {
+        Error -= 360.0f;
+    }
+    else if (Error < -180.0f)
+    {
+        Error += 360.0f;
     }
 
-    /* ── 1. 获取当前角度 ── */
-    gYawPID.Current = Yaw();                                    // 从IMU读取
+    return Error;
+}
 
-    /* ── 2. 计算角度误差 (已处理±180°环绕) ── */
-    gYawPID.Error = YawPID_AngleError(gYawPID.Target, gYawPID.Current);
-
-    /* ── 3. 积分项 (带输出限幅抗饱和) ── */
-    if (gYawPID.Ki != 0.0f)
+void YawPID_Compute(void)
+{
+    if (!Yaw_Circle.Enable_Flag)
     {
-        /*
-         * 抗积分饱和逻辑：
-         * - 输出已达上限时，不再累积同向误差
-         * - 输出已达下限时，不再累积同向误差
-         * 这防止了"积分Windup"引起的长时间超调。
-         */
-        bool out_sat_hi = (gYawPID.Output >=  gYawPID.OutputMax);
-        bool out_sat_lo = (gYawPID.Output <= -gYawPID.OutputMax);
-
-        if (!((out_sat_hi && gYawPID.Error > 0.0f) ||
-              (out_sat_lo && gYawPID.Error < 0.0f)))
-        {
-            gYawPID.Integral += gYawPID.Error;
-        }
-
-        /* 积分限幅 */
-        if (gYawPID.Integral >  gYawPID.IntegralMax)
-        {
-            gYawPID.Integral = gYawPID.IntegralMax;
-        }
-        else if (gYawPID.Integral < -gYawPID.IntegralMax)
-        {
-            gYawPID.Integral = -gYawPID.IntegralMax;
-        }
+        Yaw_Circle.Output   = 0.0f;
+        Yaw_Circle.Integral = 0.0f;
+        return;
+    }
+    
+    //1.获取角度值
+    Yaw_Circle.Yaw = Yaw(); 
+    
+    //2.计算路径
+    Yaw_Circle.Error = YawPID_AngleError(Yaw_Circle.Yaw_Target, Yaw_Circle.Yaw);
+    
+    //3.积分
+    if (Yaw_Circle.KI == 0.0f)
+    {
+        Yaw_Circle.Integral = 0.0f;
     }
     else
     {
-        gYawPID.Integral = 0.0f;
+        bool out_sat_hi = (Yaw_Circle.Output >=  Yaw_Circle.Output_Max);
+        bool out_sat_lo = (Yaw_Circle.Output <= -Yaw_Circle.Output_Max);
+
+        if (!((out_sat_hi && Yaw_Circle.Error > 0.0f) ||
+              (out_sat_lo && Yaw_Circle.Error < 0.0f)))
+        {
+            Yaw_Circle.Integral += Yaw_Circle.Error;
+        }
+
+        if (Yaw_Circle.Integral >  Yaw_Circle.Integral_Max)
+        {
+            Yaw_Circle.Integral = Yaw_Circle.Integral_Max;
+        }
+        else if (Yaw_Circle.Integral < -Yaw_Circle.Integral_Max)
+        {
+            Yaw_Circle.Integral = -Yaw_Circle.Integral_Max;
+        }
     }
-
-    /* ── 4. PID 三项合成 ── */
-    float p_term = gYawPID.Kp * gYawPID.Error;
-    float i_term = gYawPID.Ki * gYawPID.Integral;
-    float d_term = gYawPID.Kd * (gYawPID.Error - gYawPID.LastError);
-
-    gYawPID.Output = p_term + i_term + d_term;
-
-    /* ── 5. 输出限幅 ── */
-    if (gYawPID.Output >  gYawPID.OutputMax)
+    
+    //4.计算
+    float P_temp = Yaw_Circle.KP * Yaw_Circle.Error;
+    float I_temp = Yaw_Circle.KI * Yaw_Circle.Integral;
+    float D_temp = Yaw_Circle.KD * (Yaw_Circle.Error - Yaw_Circle.LastError);
+    Yaw_Circle.Output = P_temp + I_temp + D_temp;
+    
+    //5.限幅
+    if (Yaw_Circle.Output >  Yaw_Circle.Output_Max)
     {
-        gYawPID.Output = gYawPID.OutputMax;
+        Yaw_Circle.Output = Yaw_Circle.Output_Max;
     }
-    else if (gYawPID.Output < -gYawPID.OutputMax)
+    else if (Yaw_Circle.Output < -Yaw_Circle.Output_Max)
     {
-        gYawPID.Output = -gYawPID.OutputMax;
+        Yaw_Circle.Output = -Yaw_Circle.Output_Max;
     }
 
-    /* ── 6. 保存本次误差供下次微分 ── */
-    gYawPID.LastError = gYawPID.Error;
+    Yaw_Circle.LastError = Yaw_Circle.Error;
 }
 
 /**
@@ -189,42 +131,16 @@ void YawPID_Compute(void)
  * @param leftTarget    左轮目标速度 (输出)
  * @param rightTarget   右轮目标速度 (输出)
  */
-void YawPID_ApplyToWheels(float baseSpeed, float *leftTarget, float *rightTarget)
+void YawPID_Apply(float BaseSpeed, float *LeftTarget, float *RightTarget)
 {
-    if (!gYawPID.Enabled)
+    if (!Yaw_Circle.Enable_Flag)
     {
-        *leftTarget  = baseSpeed;
-        *rightTarget = baseSpeed;
+        *LeftTarget  = BaseSpeed;
+        *RightTarget = BaseSpeed;
         return;
     }
 
     /* 差速叠加: 正值Output → 左轮加速/右轮减速 → 向右转 */
-    *leftTarget  = baseSpeed + gYawPID.Output;
-    *rightTarget = baseSpeed - gYawPID.Output;
-}
-
-/**
- * @brief 启用/禁用角度环
- */
-void YawPID_Enable(bool enable)
-{
-    gYawPID.Enabled = enable;
-    if (!enable)
-    {
-        gYawPID.Output   = 0.0f;
-        gYawPID.Integral = 0.0f;
-    }
-}
-
-/**
- * @brief 重置积分累计
- *
- * 以下场景应调用此函数：
- *  - 目标Yaw角发生大的跳变
- *  - 小车被手动推偏后重新启用角度环
- *  - 检测到外部干扰导致积分异常积累
- */
-void YawPID_ResetIntegral(void)
-{
-    gYawPID.Integral = 0.0f;
+    *LeftTarget  = BaseSpeed + Yaw_Circle.Output;
+    *RightTarget = BaseSpeed - Yaw_Circle.Output;
 }
