@@ -33,7 +33,7 @@ typedef struct
     bool  Enable_Flag;        // 是否启用角度环
 } Yaw_Control;
 
-extern Yaw_Control Yaw_Circle;  // 全局角度环控制器实例
+extern Yaw_Control Yaw_Circle;  // 全局角度环控制器
 
 void YawPID_Init(float kp, float ki, float kd);//初始化角度环控制
 void YawPID_Enable(bool Enable);//启用或关闭角度环

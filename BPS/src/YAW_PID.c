@@ -20,7 +20,7 @@ void YawPID_Init(float KP, float KI, float KD)//初始化角度环控制,默认�
     Yaw_Circle.Integral_Max  = 100.0f;   // 积分上限
     Yaw_Circle.Output_Max    = 300.0f;   // 输出差速上限（叠加到速度环）
 
-    Yaw_Circle.Enable_Flag   = 1;
+    Yaw_Circle.Enable_Flag   = true;
 }
 
 void YawPID_Enable(bool Enable)//启用或关闭角度环

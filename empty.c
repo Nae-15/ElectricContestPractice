@@ -24,6 +24,12 @@ typedef struct//车轮结构体
 } Wheel;
 Wheel Wheel_Left,Wheel_Right;
 
+//--------------模式------------------
+uint8_t Mode;
+#define Mode_Stop 0
+#define Mode_Track 1
+#define Mode_AngleHold 2
+
 //-----------电机编码器----------------
 #define Encoder_Gear_Ratio 20 //减速比1:20
 #define Wheel_Radius 24 //轮子半径，单位为mm
@@ -39,6 +45,10 @@ volatile int32_t Velocity_Counter;
 //-------------时间-----------------
 int time=0;
 
+//-------------方向-----------------
+#define Forward 1
+#define Rewerse 0
+
 //-----------路程-------------------
 int32_t Distance;
 
@@ -52,15 +62,7 @@ uint8_t Track_Value;
 #define TRACK_MAX_SPEED   2500.0f   // 寻线最大速度限幅
 #define TRACK_MIN_SPEED   300.0f    // 寻线最小速度限幅（防堵转）
 
-//-----------角度环--------------------
-float Yaw_Value;
-#define YAW_KP            1.5f      // 角度环比例系数（降低防振荡）
-#define YAW_KI            0.0f      // 角度环积分系数（原地调角先关积分）
-#define YAW_KD            8.0f      // 角度环微分系数（加大阻尼抑制过冲）
-#define YAW_OUTPUT_MAX    150.0f    // 角度环输出限幅（收窄范围）
-#define YAW_REVERSE       0         // 方向反转：若小车越调越偏，改为1
-
-//-----------PID--------------------
+//-----------速度环PID--------------------
 float PID_KP = 0.05f;   // 比例系数（12V响应太快，极保守防超调）
 float PID_KI = 0.02f;   // 积分系数（极慢积分，减少稳态微振）
 float PID_KD = 0.0f;    // 微分系数
@@ -75,6 +77,20 @@ float PID_KD = 0.0f;    // 微分系数
 #define PID_Integral_Max 50.0f  // 积分最大值（小幅慢调）
 #define PID_Integral_Min -50.0f // 积分最小值（对称限幅）
 
+//-----------角度环PID--------------------
+float Yaw_Value;
+#define YAW_KP            0.5f      // 角度环比例系数（降低防过冲）
+#define YAW_KI            0.05f     // 角度环积分系数（提高克服死区）
+#define YAW_KD            1.0f      // 角度环微分系数（轻阻尼）
+#define YAW_OUTPUT_MAX    150.0f    // 角度环输出限幅（收窄范围）
+#define YAW_REVERSE       0         // 方向反转：若小车越调越偏，改为1
+
+//-----------角度维持参数-----------
+#define ANGLE_PWM_MIN     80        // 角度修正最低PWM（双轮差速，降低值）
+#define ANGLE_PWM_MAX     250       // 角度修正最高PWM
+#define ANGLE_DEADBAND     2.0f     // 角度死区（±2°内不调整）
+float Target_Yaw;
+
 void System_Init(void);     //系统初始化
 void Data_Init(void);       //数据初始化
 void Show_Init(void);       //显示初始化
@@ -84,17 +100,12 @@ void Velocity_Get(void);    //速度获取
 void Distance_Get(void);    //距离获取
 static void PID_Get(Wheel *Wheel_Temp);  //PID计算算法
 void PID_Contorl(void);     //PID实际调用
-void Mode_Tracking(void);   //沿线循迹模式
-void Mode_AngleHold(void);  //角度环维持模式
+void Run_Track(void);   //沿线循迹模式
+void Run_AngleHold(float Target_Yaw);  //角度环维持模式
 
 int main(void)
 {
     ALL_Init();
-    Wheel_Left.Velocity_Target=2000;
-    Wheel_Right.Velocity_Target=2000;
-
-    uint8_t Run_Mode = 1;   // 0=循迹模式  1=角度维持模式
-
     while(1)
     {
         Show_Update();
@@ -103,18 +114,6 @@ int main(void)
             Yaw_Value=Yaw();
             Track_Get();
             Velocity_Get();
-
-            if (Run_Mode == 0)           // 循迹模式
-            {
-                Mode_Tracking();
-                PID_Contorl();
-                AO_Control(1, Wheel_Left.PID_Output);
-                BO_Control(1, Wheel_Right.PID_Output);
-            }
-            else            // 角度维持模式（Mode_AngleHold内部直接控PWM）
-            {
-                Mode_AngleHold();
-            }
 
             // Zigbee串口1发送: Yaw(3位), 左轮速度(4位), 右轮速度(4位)
             {
@@ -127,6 +126,28 @@ int main(void)
             }
         }
 
+        switch (Mode)
+        {
+            case Mode_Stop:
+            {
+                AO_Control(FORWARD,0);
+                BO_Control(FORWARD,0);
+                break;
+            }
+            case Mode_Track:    // 循迹模式
+            {
+                Run_Track();
+                PID_Contorl();
+                AO_Control(1, Wheel_Left.PID_Output);
+                BO_Control(1, Wheel_Right.PID_Output);
+                break;
+            }
+            case Mode_AngleHold: // 角度维持模式
+            {
+                Run_AngleHold(Target_Yaw);
+                break;
+            }
+        }
     }
 }
 
@@ -160,10 +181,13 @@ void System_Init(void)//系统初始化
 
 void Data_Init(void)//数据初始化
 {
+    //速度数据初始化
     Wheel_Left.Feedforward  = LEFT_FEEDFORWARD;
     Wheel_Right.Feedforward = RIGHT_FEEDFORWARD;
-    
-    //编码器数值初始化
+    Wheel_Left.Velocity_Target=2000;
+    Wheel_Right.Velocity_Target=2000;
+
+    //编码器数据初始化
     Encoder_Get(1, &Wheel_Left.Encoder, NULL);
     Encoder_Get(2, &Wheel_Right.Encoder, NULL);
     Wheel_Left.Encoder_Last  = Wheel_Left.Encoder;
@@ -312,7 +336,7 @@ void PID_Contorl(void)//PID控制
     PID_Get(&Wheel_Right);
 }
 
-void Mode_Tracking(void)//沿线循迹
+void Run_Track(void)//沿线循迹
 {
     static float Last_Error = 0;       // 上一拍偏差，用于丢线恢复
 
@@ -361,53 +385,50 @@ void Mode_Tracking(void)//沿线循迹
     }
 }
 
-//-----------角度维持直接PWM参数-----------
-#define ANGLE_PWM_MIN     130       // 角度修正最低PWM（降低防过冲）
-#define ANGLE_PWM_MAX     400       // 角度修正最高PWM
-#define ANGLE_DEADBAND     2.0f     // 角度死区（±2°内不调整）
-
-void Mode_AngleHold(void)//角度环维持：直接控PWM，一轮动一轮停，原地调角
+void Run_AngleHold(float Target_Yaw)//角度环维持：双轮差速，原地保持角度
 {
-    static float last_sign = 0;     // 上一拍输出方向
+    Yaw_Circle.Yaw_Target=Target_Yaw;
+    static float Last_Direction = 0;  // 上一拍输出方向
 
     YawPID_Compute();
-    float out = Yaw_Circle.Output;          // >0需右转，<0需左转
+    float Output = Yaw_Circle.Output; // >0需右转，<0需左转
 
-#if YAW_REVERSE
-    out = -out;                              // 方向反转
-#endif
+    #if YAW_REVERSE
+    Output = -Output;                 // 方向反转
+    #endif
 
     // 方向过零 → 清积分，防过冲
-    if ((last_sign > 0.0f && out < 0.0f) ||
-        (last_sign < 0.0f && out > 0.0f))
+    if ((Last_Direction > 0.0f && Output < 0.0f) ||
+        (Last_Direction < 0.0f && Output > 0.0f))
     {
         YawPID_ResetIntegral();
     }
-    last_sign = out;
+    Last_Direction = Output;
 
     // 死区：±2°内停转
-    float abs_out = (out > 0.0f) ? out : -out;
-    if (abs_out < ANGLE_DEADBAND)
+    float Abs_Output = (Output > 0.0f) ? Output : -Output;
+    if (Abs_Output < ANGLE_DEADBAND)
     {
-        AO_Control(1, 0);
-        BO_Control(1, 0);
+        AO_Control(Forward, 0);
+        BO_Control(Forward, 0);
         return;
     }
 
-    // 映射 |Output| → PWM
-    uint32_t pwm = (uint32_t)(ANGLE_PWM_MIN +
-        (abs_out / YAW_OUTPUT_MAX) * (ANGLE_PWM_MAX - ANGLE_PWM_MIN));
-    if (pwm > ANGLE_PWM_MAX) pwm = ANGLE_PWM_MAX;
-
-    if (out > 0.0f)      // 右转：左轮前进，右轮停
+    uint32_t Pwm = (uint32_t)(ANGLE_PWM_MIN +(Abs_Output / YAW_OUTPUT_MAX) * (ANGLE_PWM_MAX - ANGLE_PWM_MIN));
+    
+    if (Pwm > ANGLE_PWM_MAX) 
     {
-        AO_Control(1, pwm);
-        BO_Control(1, 0);
+        Pwm = ANGLE_PWM_MAX;
     }
-    else                 // 左转：右轮前进，左轮停
+    if (Output > 0.0f)      // 右转：左轮前进，右轮后退
     {
-        AO_Control(1, 0);
-        BO_Control(1, pwm);
+        AO_Control(Forward, Pwm);
+        BO_Control(Rewerse, Pwm);
+    }
+    else                    // 左转：右轮前进，左轮后退
+    {
+        AO_Control(Rewerse, Pwm);
+        BO_Control(Forward, Pwm);
     }
 }
 
