@@ -43,7 +43,7 @@ uint8_t Mode;
 volatile int32_t Velocity_Counter;
 
 //-------------时间-----------------
-int time=0;
+int time;
 
 //-------------方向-----------------
 #define Forward 1
@@ -54,16 +54,34 @@ int32_t Distance;
 
 //-----------循迹-------------------
 uint8_t Track_Value;
-#define TRACK_CENTER      40.0f     // 7路传感器中心加权值（传感器4居中）
-#define TRACK_KP          35.0f     // 寻线比例系数（速度差/偏差单位）
+#define TRACK_CENTER    40.0f     // 7路传感器中心加权值（传感器4居中）
+#define TRACK_KP        20.0f     // 寻线比例系数（速度差/偏差单位，降低防振荡）
 
-#define TRACK_BASE_SPEED  1500.0f   // 寻线基础速度
-#define TRACK_LOST_SPEED  700.0f    // 丢线时降速搜索
-#define TRACK_MAX_SPEED   2500.0f   // 寻线最大速度限幅
-#define TRACK_MIN_SPEED   300.0f    // 寻线最小速度限幅（防堵转）
+#define TRACK_BASE_SPEED      1300.0f   //寻线基础速度（降速增加直角弯反应时间）
+#define TRACK_LOST_SPEED      700.0f    //丢线时降速搜索
+#define TRACK_MAX_SPEED       2500.0f   //寻线最大速度限幅
+// 直角弯不再用阈值判断，直接按Last_Error符号决定方向（Error=0时走普通丢线）
+#define TRACK_MIN_SPEED       300.0f    //寻线最小速度限幅（防堵转）
+
+//-----------直角转弯-------------------
+#define TURN_PWM              160       //转弯最大PWM（降速提高精度）
+#define TURN_PWM_MIN          70        //转弯最小PWM（克服静摩擦）
+#define TURN_TARGET_ANGLE     85.0f     //目标转弯角度（度）
+#define TURN_DEADBAND         5.0f      //转弯死区（±5°内停转）
+#define TURN_BACKUP_PWM       120       //转弯前后退PWM
+#define TURN_BACKUP_DISTANCE  30.0f     //转弯前后退距离
+
+typedef enum {
+    TURN_None  = 0,
+    TURN_Left  = 1,    // 左直角弯 → 车左转90°(CCW)
+    TURN_Right = 2,    // 右直角弯 → 车右转90°(CW)
+} Turn_Direction;
+
+uint8_t Turn_State;          // 转弯状态
+float   Turn_Start_Yaw = 0;  // 转弯起始航向角
 
 //-----------速度环PID--------------------
-float PID_KP = 0.05f;   // 比例系数（12V响应太快，极保守防超调）
+float PID_KP = 0.10f;   // 比例系数（提高以加快轮速响应）
 float PID_KI = 0.02f;   // 积分系数（极慢积分，减少稳态微振）
 float PID_KD = 0.0f;    // 微分系数
 
@@ -71,14 +89,14 @@ float PID_KD = 0.0f;    // 微分系数
 #define LEFT_FEEDFORWARD  0.0976f
 #define RIGHT_FEEDFORWARD 0.0920f
 //PID输出限幅
-#define PID_MAX_OUTPUT 800.0f // 最大输出
-#define PID_MIN_OUTPUT 80.0f  // 最小输出
+#define PID_MAX_OUTPUT    800.0f // 最大输出
+#define PID_MIN_OUTPUT    80.0f  // 最小输出
 //PID积分限幅
-#define PID_Integral_Max 50.0f  // 积分最大值（小幅慢调）
-#define PID_Integral_Min -50.0f // 积分最小值（对称限幅）
+#define PID_Integral_Max  50.0f  // 积分最大值（小幅慢调）
+#define PID_Integral_Min -50.0f  // 积分最小值（对称限幅）
 
 //-----------角度环PID--------------------
-float Yaw_Value;
+float Yaw_Value;                    // 实测航向角
 #define YAW_KP            0.5f      // 角度环比例系数（降低防过冲）
 #define YAW_KI            0.05f     // 角度环积分系数（提高克服死区）
 #define YAW_KD            1.0f      // 角度环微分系数（轻阻尼）
@@ -88,8 +106,8 @@ float Yaw_Value;
 //-----------角度维持参数-----------
 #define ANGLE_PWM_MIN     80        // 角度修正最低PWM（双轮差速，降低值）
 #define ANGLE_PWM_MAX     250       // 角度修正最高PWM
-#define ANGLE_DEADBAND     2.0f     // 角度死区（±2°内不调整）
-float Target_Yaw;
+#define ANGLE_DEADBAND    2.0f      // 角度死区（±2°内不调整）
+float Target_Yaw;                   // 维持角度目标值
 
 void System_Init(void);     //系统初始化
 void Data_Init(void);       //数据初始化
@@ -100,8 +118,11 @@ void Velocity_Get(void);    //速度获取
 void Distance_Get(void);    //距离获取
 static void PID_Get(Wheel *Wheel_Temp);  //PID计算算法
 void PID_Contorl(void);     //PID实际调用
-void Run_Track(void);   //沿线循迹模式
-void Run_AngleHold(float Target_Yaw);  //角度环维持模式
+
+void Run_Stop(void);                    //停止模式
+void Run_Track(void);                   //沿线循迹模式
+void Run_AngleHold(float Target_Yaw);   //角度环维持模式
+void Run_Turn(void);                    //原地直角转弯
 
 int main(void)
 {
@@ -111,15 +132,14 @@ int main(void)
         Show_Update();
         if(time>Velocity_Interval)
         {
-            Yaw_Value=Yaw();
-            Track_Get();
             Velocity_Get();
+            Track_Value = Track_Get(); 
 
             // Zigbee串口1发送: Yaw(3位), 左轮速度(4位), 右轮速度(4位)
             {
                 char buf[64];
-                sprintf(buf, "%.0f,%.0f,%.0f\n",
-                        Yaw_Value,
+                sprintf(buf, "%d,%.0f,%.0f\n",
+                        Track_Value,
                         Wheel_Left.Velocity,
                         Wheel_Right.Velocity);
                 uart1_sendString(buf);
@@ -130,16 +150,19 @@ int main(void)
         {
             case Mode_Stop:
             {
-                AO_Control(FORWARD,0);
-                BO_Control(FORWARD,0);
+                Run_Stop();
                 break;
             }
-            case Mode_Track:    // 循迹模式
+            case Mode_Track:    // 循迹模式（丢线直角弯检测在Run_Track内）
             {
-                Run_Track();
-                PID_Contorl();
-                AO_Control(1, Wheel_Left.PID_Output);
-                BO_Control(1, Wheel_Right.PID_Output);
+                if (Turn_State != TURN_None)
+                {
+                    Run_Turn();
+                }
+                else
+                {
+                    Run_Track();
+                }
                 break;
             }
             case Mode_AngleHold: // 角度维持模式
@@ -177,6 +200,9 @@ void System_Init(void)//系统初始化
 
     //Zigbee占用串口1
     //Zigbee_Init();
+
+    Mode=Mode_Track;
+    Turn_State = TURN_None;
 }
 
 void Data_Init(void)//数据初始化
@@ -192,23 +218,36 @@ void Data_Init(void)//数据初始化
     Encoder_Get(2, &Wheel_Right.Encoder, NULL);
     Wheel_Left.Encoder_Last  = Wheel_Left.Encoder;
     Wheel_Right.Encoder_Last = Wheel_Right.Encoder;
+
+    //时钟初始化
+    time=0;
+
+    //路程初始化
+    Distance=0;
+
+    //角度初始化
+    Yaw_Value=0;
+    Target_Yaw=0;
+
+    //循迹值初始化
+    Track_Value=0;
+
 }
 
 void Show_Init(void)//显示初始化
 {
     LCD_ShowString(30,20,"Left_E:",RED,BLACK,16,0);
-    LCD_ShowString(150,20,"Left_E:",GREEN,BLACK,16,0); 
+    LCD_ShowString(150,20,"Right_E:",GREEN,BLACK,16,0); 
     LCD_ShowString(30,40,"Left_V:",RED,BLACK,16,0);
-    LCD_ShowString(150,40,"Left_R:",GREEN,BLACK,16,0);
+    LCD_ShowString(150,40,"Right_V:",GREEN,BLACK,16,0);
     LCD_ShowString(30,60,"Left_O:",RED,BLACK,16,0);
-    LCD_ShowString(150,60,"Left_O:",GREEN,BLACK,16,0); 
+    LCD_ShowString(150,60,"Right_O:",GREEN,BLACK,16,0); 
     LCD_ShowString(30,80,"KP:",BLUE,BLACK,16,0);
     LCD_ShowString(100,80,"KI:",BLUE,BLACK,16,0);
     LCD_ShowString(170,80,"KD:",BLUE,BLACK,16,0);
     LCD_ShowString(30,100,"TRACK:",WHITE,BLACK,16,0); 
     LCD_ShowString(120,100,"Distance:",WHITE,BLACK,16,0); 
     LCD_ShowString(30,120,"Yaw:",WHITE,BLACK,16,0); 
-
 }
 
 void ALL_Init(void)//全局初始化
@@ -218,7 +257,7 @@ void ALL_Init(void)//全局初始化
     Show_Init();
 }
 
-void Show_Update(void)
+void Show_Update(void)//显示更新
 {
     LCD_ShowIntNum(100, 20, Wheel_Left.Encoder, 5, RED, BLACK, 16);
     LCD_ShowIntNum(220, 20, Wheel_Right.Encoder, 5, GREEN, BLACK, 16);
@@ -336,24 +375,61 @@ void PID_Contorl(void)//PID控制
     PID_Get(&Wheel_Right);
 }
 
-void Run_Track(void)//沿线循迹
+void Run_Stop(void)//停止运动
+{
+    AO_Control(FORWARD,0);
+    BO_Control(FORWARD,0);
+}
+
+void Run_Track(void)//沿线循迹（含丢线直角弯检测）
 {
     static float Last_Error = 0;       // 上一拍偏差，用于丢线恢复
-
-    Track_Value = Track_Get();         // 读取7路循迹传感器加权位置
+    static uint8_t Tracking_Flag = 0;  // 丢线前是否在循迹中
 
     if (Track_Value == 0)              // 丢线：所有传感器均未检测到黑线
     {
-        //降速并以最后一次偏差方向持续转向，尝试找回线
+        // 刚丢线时检查是否为直角弯：丢线前偏差符号决定转弯方向
+        if (Tracking_Flag)
+        {
+            Tracking_Flag = 0;
+
+            if (Last_Error > 0)
+            {
+                // 丢线前线偏右 → 右直角弯
+                Turn_State = TURN_Right;
+                Turn_Start_Yaw = Yaw();
+                Last_Error = 0;
+                return;
+            }
+            else if (Last_Error < 0)
+            {
+                // 丢线前线偏左 → 左直角弯
+                Turn_State = TURN_Left;
+                Turn_Start_Yaw = Yaw();
+                Last_Error = 0;
+                return;
+            }
+            // Last_Error == 0：无法判断方向，走普通丢线找回
+        }
+
+        // 非直角弯丢线：降速并以最后一次偏差方向持续转向，尝试找回线
         float Lost_Error = Last_Error;
-        if (Lost_Error > TRACK_CENTER) Lost_Error = TRACK_CENTER;
-        if (Lost_Error < -TRACK_CENTER) Lost_Error = -TRACK_CENTER;
+        if (Lost_Error > TRACK_CENTER) 
+        {
+            Lost_Error = TRACK_CENTER;
+        }
+        if (Lost_Error < -TRACK_CENTER)
+        {
+            Lost_Error = -TRACK_CENTER;
+        }
 
         Wheel_Left.Velocity_Target  = TRACK_LOST_SPEED + Lost_Error * TRACK_KP;
         Wheel_Right.Velocity_Target = TRACK_LOST_SPEED - Lost_Error * TRACK_KP;
     }
     else
     {
+        Tracking_Flag = 1;  // 标记正在循迹
+
         //计算偏差：Track_Value - TRACK_CENTER
         //正 → 黑线偏右 → 右轮减速、左轮加速 → 车向右转
         //负 → 黑线偏左 → 左轮减速、右轮加速 → 车向左转
@@ -378,10 +454,128 @@ void Run_Track(void)//沿线循迹
         {
             Wheel_Right.Velocity_Target = TRACK_MAX_SPEED;
         }
-        if (Wheel_Right.Velocity_Target < TRACK_MIN_SPEED) 
+        if (Wheel_Right.Velocity_Target < TRACK_MIN_SPEED)
         {
             Wheel_Right.Velocity_Target = TRACK_MIN_SPEED;
         }
+    }
+
+    //未触发转弯则执行PID+电机驱动（丢线找回 & 正常循迹共用）
+    if (Turn_State == TURN_None)
+    {
+        PID_Contorl();
+        AO_Control(1, Wheel_Left.PID_Output);
+        BO_Control(1, Wheel_Right.PID_Output);
+    }
+}
+
+void Run_Turn(void)//直角转弯：先短距离后退回到路口中心，再转弯
+{
+    static uint8_t  Phase = 0;                // 0=后退阶段, 1=转弯阶段
+    static int32_t  Backup_Start_Enconder_L = 0; // 后退起始左编码器
+    static int32_t  Backup_Start_Enconder_R = 0; // 后退起始右编码器
+    static uint8_t  Last_Turn_State = TURN_None; // 上一拍转弯状态，检测新转弯
+
+    // 检测到新转弯 → 重置阶段和编码器基准
+    if (Turn_State != Last_Turn_State)
+    {
+        Last_Turn_State = Turn_State;
+        if (Turn_State != TURN_None)
+        {
+            Phase = 0;
+            Backup_Start_Enconder_L = 0;
+            Backup_Start_Enconder_R = 0;
+        }
+    }
+
+    //阶段0:先后退，回到路口中心(编码器实测距离)
+    if(Phase == 0)
+    {
+        //记录起始编码器值
+        if(Backup_Start_Enconder_L == 0 && Backup_Start_Enconder_R == 0)
+        {
+            Encoder_Get(1, &Backup_Start_Enconder_L, NULL);
+            Encoder_Get(2, &Backup_Start_Enconder_R, NULL);
+        }
+        //两轮同时后退
+        AO_Control(Rewerse, TURN_BACKUP_PWM);
+        BO_Control(Rewerse, TURN_BACKUP_PWM);
+        //编码器实测后退距离
+        int32_t Current_Enconder_L, Current_Enconder_R;
+        Encoder_Get(1, &Current_Enconder_L, NULL);
+        Encoder_Get(2, &Current_Enconder_R, NULL);
+
+        int32_t Delta_L = Current_Enconder_L - Backup_Start_Enconder_L;
+        int32_t Delta_R = Current_Enconder_R - Backup_Start_Enconder_R;
+        if (Delta_L < 0) Delta_L = -Delta_L;
+        if (Delta_R < 0) Delta_R = -Delta_R;
+
+        float Averege_Pulses = (float)(Delta_L + Delta_R) / 2.0f;
+        float Backup_Distance = Averege_Pulses / Encoder_Pulses_Per_Revolution
+        / Encoder_Gear_Ratio * 2.0f * Pi * Wheel_Radius;
+
+        if (Backup_Distance >= TURN_BACKUP_DISTANCE)//后退完成，进入转弯，并重置，为下次转弯准备
+        {
+            Phase = 1;           
+            Backup_Start_Enconder_L = 0; 
+            Backup_Start_Enconder_R = 0;
+        }
+        return;
+    }
+
+    //阶段1:转弯（比例减速）
+    float Current_Yaw = Yaw();
+    float Delta = Current_Yaw - Turn_Start_Yaw;
+
+    // 处理±180°环绕
+    if (Delta > 180.0f)
+    {
+        Delta -= 360.0f;
+    } 
+    else if (Delta < -180.0f)
+    {
+        Delta += 360.0f;
+    }
+
+    float AbsDelta = (Delta > 0) ? Delta : -Delta;
+    float Remaining = TURN_TARGET_ANGLE - AbsDelta;
+
+    // 进入死区 → 转弯完成
+    if (Remaining <= TURN_DEADBAND)
+    {
+        AO_Control(Forward, 0);
+        BO_Control(Forward, 0);
+
+        // 重置PID积分
+        Wheel_Left.PID_Integral   = 0;
+        Wheel_Right.PID_Integral  = 0;
+        Wheel_Left.PID_LastError  = 0;
+        Wheel_Right.PID_LastError = 0;
+
+        Turn_State = TURN_None;
+        Phase = 0;
+        return;
+    }
+
+    // 比例控制：越接近目标 PWM 越低
+    float ratio = Remaining / TURN_TARGET_ANGLE;
+    if (ratio > 1.0f) 
+    {
+        ratio = 1.0f;
+    }
+
+    uint32_t Pwm = (uint32_t)(TURN_PWM_MIN + ratio * (TURN_PWM - TURN_PWM_MIN));
+    if (Turn_State == TURN_Left)
+    {
+        // 左转(CCW)：左轮停，右轮前进 → 车绕左轮 pivot 左转
+        AO_Control(Forward, 0);
+        BO_Control(Forward, Pwm);
+    }
+    else // TURN_Right
+    {
+        // 右转(CW)：左轮前进，右轮停 → 车绕右轮 pivot 右转
+        AO_Control(Forward, Pwm);
+        BO_Control(Forward, 0);
     }
 }
 
@@ -390,6 +584,7 @@ void Run_AngleHold(float Target_Yaw)//角度环维持：双轮差速，原地保
     Yaw_Circle.Yaw_Target=Target_Yaw;
     static float Last_Direction = 0;  // 上一拍输出方向
 
+    Yaw_Value=Yaw();
     YawPID_Compute();
     float Output = Yaw_Circle.Output; // >0需右转，<0需左转
 
