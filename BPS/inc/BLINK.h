@@ -4,6 +4,8 @@
 #include "board.h"
 #include "ti_msp_dl_config.h"
 
+extern int time;
+
 void BUZZER_Blink(void);
 void LED_Blink(void);
 
