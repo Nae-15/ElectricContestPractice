@@ -192,11 +192,12 @@ GPIO7.associatedPins[2].internalResistor = "PULL_UP";
 GPIO7.associatedPins[2].assignedPin      = "23";
 GPIO7.associatedPins[2].pin.$assign      = "PB23";
 
-GPIO8.$name                         = "LED";
-GPIO8.port                          = "PORTB";
-GPIO8.associatedPins[0].$name       = "Pin";
-GPIO8.associatedPins[0].assignedPin = "3";
-GPIO8.associatedPins[0].pin.$assign = "PB3";
+GPIO8.$name                          = "LED";
+GPIO8.port                           = "PORTA";
+GPIO8.associatedPins[0].$name        = "Pin";
+GPIO8.associatedPins[0].assignedPin  = "17";
+GPIO8.associatedPins[0].initialValue = "SET";
+GPIO8.associatedPins[0].pin.$assign  = "PA17";
 
 NONMAIN.nonmainWarning = true;
 NONMAIN.bslMode        = false;

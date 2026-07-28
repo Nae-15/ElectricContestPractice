@@ -8,6 +8,7 @@
 #include "BPS/inc/TRACK.h"
 #include "BPS/inc/YAW_PID.h"
 #include "BPS/inc/ZIGBEE.h"
+#include "BLINK.h"
 
 typedef struct//车轮结构体
 {
@@ -66,7 +67,7 @@ uint8_t Track_Value;
 //-----------直角转弯-------------------
 #define TURN_PWM              160       //转弯最大PWM（降速提高精度）
 #define TURN_PWM_MIN          70        //转弯最小PWM（克服静摩擦）
-#define TURN_DRIVE_FORWARD_DISTANCE  10.0f     //转弯前直走距离(mm)
+#define TURN_DRIVE_FORWARD_DISTANCE  0.0f     //转弯前直走距离(mm)
 #define TURN_TARGET_ANGLE            85.0f     //目标转弯角度（度）
 #define TURN_DEADBAND         5.0f      //转弯死区（±5°内停转）
 
@@ -86,7 +87,7 @@ float PID_KI = 0.02f;   // 积分系数（极慢积分，减少稳态微振）
 float PID_KD = 0.0f;    // 微分系数
 
 // 前馈系数：12V供电，左右独立校准（右比左快2.72%，左需补偿）
-#define LEFT_FEEDFORWARD  0.0956f
+#define LEFT_FEEDFORWARD  0.0930f
 #define RIGHT_FEEDFORWARD 0.0920f
 //PID输出限幅
 #define PID_MAX_OUTPUT    800.0f // 最大输出
@@ -129,10 +130,13 @@ int main(void)
     ALL_Init();
     while(1)
     {
-        Show_Update();
+        BUZZER_Blink();
+        LED_Blink();
         if(time>Velocity_Interval)
         {
             Velocity_Get();
+            Distance_Get();
+            Yaw_Value=Yaw();
 
             // Zigbee串口1发送（Track_Value由Run_Track每帧更新）
             {
@@ -391,7 +395,7 @@ void Run_Track(void)//沿线循迹（含丢线直角弯检测）
 
     if (Track_Value == 0)              // 丢线：所有传感器均未检测到黑线
     {
-        // 刚丢线时检查是否为直角弯：传感器计数 + Last_Error 双重校验
+        // 刚丢线时检查是否为直角弯：传感器计数优先，Last_Error兜底
         if (Tracking_Flag)
         {
             Tracking_Flag = 0;
@@ -404,30 +408,32 @@ void Run_Track(void)//沿线循迹（含丢线直角弯检测）
                               + ((Last_Track_Bits & 0x20) != 0)
                               + ((Last_Track_Bits & 0x40) != 0);
 
-            // 双重校验：传感器计数方向 必须与 Last_Error 符号一致
-            // 任一方法不确定则不走直角弯，避免转错方向
-            uint8_t bits_left  = (left_cnt > right_cnt);   // 传感器认为左转
-            uint8_t bits_right = (right_cnt > left_cnt);   // 传感器认为右转
-            uint8_t err_left   = (Last_Error < 0);          // 偏差认为左转
-            uint8_t err_right  = (Last_Error > 0);          // 偏差认为右转
-
-            if (bits_left && err_left)
+            // 分层决策：传感器计数优先，计数相等时用Last_Error兜底
+            if (left_cnt > right_cnt)
             {
                 Turn_State = TURN_Left;
-                Turn_Start_Yaw = Yaw();
-                Last_Error = 0;
-                Last_Track_Bits = 0;
-                return;
             }
-            if (bits_right && err_right)
+            else if (right_cnt > left_cnt)
             {
                 Turn_State = TURN_Right;
+            }
+            else if (Last_Error < 0)
+            {
+                Turn_State = TURN_Left;   // 计数相等，偏差兜底
+            }
+            else if (Last_Error > 0)
+            {
+                Turn_State = TURN_Right;  // 计数相等，偏差兜底
+            }
+
+            if (Turn_State != TURN_None)
+            {
                 Turn_Start_Yaw = Yaw();
                 Last_Error = 0;
                 Last_Track_Bits = 0;
                 return;
             }
-            // 两方法结论不一致 → 不确定，走普通丢线找回
+            // 计数相等且Last_Error==0 → 无法判断，走普通丢线找回
         }
 
         // 非直角弯丢线：降速并以最后一次偏差方向持续转向，尝试找回线
@@ -519,12 +525,12 @@ void Run_Turn(void)//直角转弯：先短暂直走冲过路口，再原地转�
         AO_Control(Forward, TURN_PWM);
         BO_Control(Forward, TURN_PWM);
 
-        int32_t Cur_L, Cur_R;
-        Encoder_Get(1, &Cur_L, NULL);
-        Encoder_Get(2, &Cur_R, NULL);
+        int32_t Current_Left, Current_Right;
+        Encoder_Get(1, &Current_Left, NULL);
+        Encoder_Get(2, &Current_Right, NULL);
 
-        int32_t DL = Cur_L - Encoder_Start_L;
-        int32_t DR = Cur_R - Encoder_Start_R;
+        int32_t DL = Current_Left - Encoder_Start_L;
+        int32_t DR = Current_Right - Encoder_Start_R;
         if (DL < 0) DL = -DL;
         if (DR < 0) DR = -DR;
 
