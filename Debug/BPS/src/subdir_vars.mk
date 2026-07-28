@@ -10,6 +10,7 @@ C_SRCS += \
 ../BPS/src/ENCODER.c \
 ../BPS/src/IMU.c \
 ../BPS/src/KEY.c \
+../BPS/src/MAXICAM.c \
 ../BPS/src/MOTOR.c \
 ../BPS/src/TRACK.c \
 ../BPS/src/YAW_PID.c \
@@ -20,6 +21,7 @@ C_DEPS += \
 ./BPS/src/ENCODER.d \
 ./BPS/src/IMU.d \
 ./BPS/src/KEY.d \
+./BPS/src/MAXICAM.d \
 ./BPS/src/MOTOR.d \
 ./BPS/src/TRACK.d \
 ./BPS/src/YAW_PID.d \
@@ -30,6 +32,7 @@ OBJS += \
 ./BPS/src/ENCODER.o \
 ./BPS/src/IMU.o \
 ./BPS/src/KEY.o \
+./BPS/src/MAXICAM.o \
 ./BPS/src/MOTOR.o \
 ./BPS/src/TRACK.o \
 ./BPS/src/YAW_PID.o \
@@ -40,6 +43,7 @@ OBJS__QUOTED += \
 "BPS\src\ENCODER.o" \
 "BPS\src\IMU.o" \
 "BPS\src\KEY.o" \
+"BPS\src\MAXICAM.o" \
 "BPS\src\MOTOR.o" \
 "BPS\src\TRACK.o" \
 "BPS\src\YAW_PID.o" \
@@ -50,6 +54,7 @@ C_DEPS__QUOTED += \
 "BPS\src\ENCODER.d" \
 "BPS\src\IMU.d" \
 "BPS\src\KEY.d" \
+"BPS\src\MAXICAM.d" \
 "BPS\src\MOTOR.d" \
 "BPS\src\TRACK.d" \
 "BPS\src\YAW_PID.d" \
@@ -59,6 +64,7 @@ C_SRCS__QUOTED += \
 "../BPS/src/BLINK.c" \
 "../BPS/src/ENCODER.c" \
 "../BPS/src/IMU.c" \
+"../BPS/src/MAXICAM.c" \
 "../BPS/src/MOTOR.c" \
 "../BPS/src/TRACK.c" \
 "../BPS/src/YAW_PID.c" \

@@ -1,6 +1,8 @@
 # FIXED
 
-empty.o: ../empty.c \
+BPS/src/MAXICAM.o: ../BPS/src/MAXICAM.c \
+ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/MAIXCAM.h \
+ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h \
  ti_msp_dl_config.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/msp/msp.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/DeviceFamily.h \
@@ -83,13 +85,9 @@ empty.o: ../empty.c \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_vref.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_wwdt.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_interrupt.h \
- E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h \
- ../BPS/inc/KEY.h ../BPS/Board/board.h ../BPS/inc/ENCODER.h \
- ../BPS/inc/IMU.h \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h \
- ../BPS/lcd/lcd.h ../BPS/Board/board.h ../BPS/lcd/lcd_init.h \
- ../BPS/inc/MOTOR.h ../BPS/inc/TRACK.h ../BPS/inc/YAW_PID.h \
- ../BPS/inc/ZIGBEE.h ../BPS/inc/BLINK.h ../BPS/inc/MAIXCAM.h
+ E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h
+E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/MAIXCAM.h:
+E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h:
 ti_msp_dl_config.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/msp/msp.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/DeviceFamily.h:
@@ -173,17 +171,3 @@ E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_vref.
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_wwdt.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_interrupt.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h:
-../BPS/inc/KEY.h:
-../BPS/Board/board.h:
-../BPS/inc/ENCODER.h:
-../BPS/inc/IMU.h:
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h:
-../BPS/lcd/lcd.h:
-../BPS/Board/board.h:
-../BPS/lcd/lcd_init.h:
-../BPS/inc/MOTOR.h:
-../BPS/inc/TRACK.h:
-../BPS/inc/YAW_PID.h:
-../BPS/inc/ZIGBEE.h:
-../BPS/inc/BLINK.h:
-../BPS/inc/MAIXCAM.h:

@@ -4,23 +4,6 @@
 #include "board.h"
 #include "ti/driverlib/m0p/dl_core.h"
 
-
-#ifdef UART_0_INST
-static void uart0_sendChar(uint8_t dat)
-{
-    //当串口0忙的时候等待，不忙的时候再发送传进来的字符
-    while( DL_UART_isBusy(UART_0_INST) == true );
-
-    //发送单个字符
-    DL_UART_Main_transmitData(UART_0_INST, dat);
-}
-#else
-static void uart0_sendChar(uint8_t dat)
-{
-    (void)dat; // 避免未使用参数警告
-}
-#endif
-
 void UART0_Init(void)
 {
     // 清空上电期间IMU灌入UART RX FIFO的垃圾数据
@@ -43,14 +26,14 @@ void UART0_Init(void)
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
 }
 
-void UART1_Init(void)
+void UART2_Init(void)
 {
-    while(DL_UART_Main_isRXFIFOEmpty(UART_1_INST) == false) 
+    while(DL_UART_Main_isRXFIFOEmpty(UART_2_INST) == false) 
     {
-        DL_UART_Main_receiveData(UART_1_INST);
+        DL_UART_Main_receiveData(UART_2_INST);
     }
     // 清除所有UART中断标志（溢出、帧错误等），防止UART硬件锁死
-    DL_UART_Main_clearInterruptStatus(UART_1_INST,
+    DL_UART_Main_clearInterruptStatus(UART_2_INST,
         DL_UART_MAIN_INTERRUPT_RX |
         DL_UART_MAIN_INTERRUPT_OVERRUN_ERROR |
         DL_UART_MAIN_INTERRUPT_FRAMING_ERROR |
@@ -59,9 +42,54 @@ void UART1_Init(void)
         DL_UART_MAIN_INTERRUPT_RX_TIMEOUT_ERROR |
         DL_UART_MAIN_INTERRUPT_NOISE_ERROR);
     // 清除NVIC挂起的中断
-    NVIC_ClearPendingIRQ(UART_1_INST_INT_IRQN);
+    NVIC_ClearPendingIRQ(UART_2_INST_INT_IRQN);
     // 使能串口中断
-    NVIC_EnableIRQ(UART_1_INST_INT_IRQN);
+    NVIC_EnableIRQ(UART_2_INST_INT_IRQN);
+}
+
+void UART3_Init(void)
+{
+    while(DL_UART_Main_isRXFIFOEmpty(UART_3_INST) == false) 
+    {
+        DL_UART_Main_receiveData(UART_3_INST);
+    }
+    // 清除所有UART中断标志（溢出、帧错误等），防止UART硬件锁死
+    DL_UART_Main_clearInterruptStatus(UART_3_INST,
+        DL_UART_MAIN_INTERRUPT_RX |
+        DL_UART_MAIN_INTERRUPT_OVERRUN_ERROR |
+        DL_UART_MAIN_INTERRUPT_FRAMING_ERROR |
+        DL_UART_MAIN_INTERRUPT_PARITY_ERROR |
+        DL_UART_MAIN_INTERRUPT_BREAK_ERROR |
+        DL_UART_MAIN_INTERRUPT_RX_TIMEOUT_ERROR |
+        DL_UART_MAIN_INTERRUPT_NOISE_ERROR);
+    // 清除NVIC挂起的中断
+    NVIC_ClearPendingIRQ(UART_3_INST_INT_IRQN);
+    // 使能串口中断
+    NVIC_EnableIRQ(UART_3_INST_INT_IRQN);
+}
+
+#ifdef UART_0_INST
+static void uart0_sendChar(uint8_t dat)
+{
+    //当串口0忙的时候等待，不忙的时候再发送传进来的字符
+    while( DL_UART_isBusy(UART_0_INST) == true );
+
+    //发送单个字符
+    DL_UART_Main_transmitData(UART_0_INST, dat);
+}
+#else
+static void uart0_sendChar(uint8_t dat)
+{
+    (void)dat; // 避免未使用参数警告
+}
+#endif
+
+void uart0_send_SendByte(uint8_t* data, uint32_t len)
+{
+    for(uint32_t i = 0; i < len; i++)
+    {
+        uart0_sendChar(data[i]);  // 直接发送原始字节
+    }
 }
 
 void uart0_sendString(char* str)
@@ -74,32 +102,24 @@ void uart0_sendString(char* str)
     }
 }
 
-#ifdef UART_1_INST
-static void uart1_sendChar(uint8_t dat)
+#ifdef UART_2_INST
+static void uart2_sendChar(uint8_t dat)
 {
-    while( DL_UART_isBusy(UART_1_INST) == true );
-    DL_UART_Main_transmitData(UART_1_INST, dat);
+    while( DL_UART_isBusy(UART_2_INST) == true );
+    DL_UART_Main_transmitData(UART_2_INST, dat);
 }
 #else
-static void uart1_sendChar(uint8_t dat)
+static void uart2_sendChar(uint8_t dat)
 {
     (void)dat;
 }
 #endif
 
-void uart1_sendString(char* str)
+void uart2_sendString(char* str)
 {
     while( *str!=0 && str!=0 )
     {
-        uart1_sendChar(*str++);
-    }
-}
-
-void uart0_send_SendByte(uint8_t* data, uint32_t len)
-{
-    for(uint32_t i = 0; i < len; i++)
-    {
-        uart0_sendChar(data[i]);  // 直接发送原始字节
+        uart2_sendChar(*str++);
     }
 }
 
@@ -135,8 +155,6 @@ int LOG_Debug_Out(const char* __file, const char* __func, int __line, const char
 
     return len;
 }
-
-
 
 int lc_printf(char* format,...)
 {

@@ -8,7 +8,8 @@
 #include "BPS/inc/TRACK.h"
 #include "BPS/inc/YAW_PID.h"
 #include "BPS/inc/ZIGBEE.h"
-#include "BLINK.h"
+#include "BPS/inc/BLINK.h"
+#include "BPS/inc/MAIXCAM.h"
 
 typedef struct//车轮结构体
 {
@@ -132,6 +133,15 @@ int main(void)
     {
         BUZZER_Blink();
         LED_Blink();
+
+        Show_Update();
+
+        // 视觉数据就绪 → 消费并清零标志
+        if (maixcam_rx_ready)
+        {
+            maixcam_rx_ready = 0;
+        }
+
         if(time>Velocity_Interval)
         {
             Velocity_Get();
@@ -145,7 +155,7 @@ int main(void)
                         Track_Value,
                         Wheel_Left.Velocity,
                         Wheel_Right.Velocity);
-                uart1_sendString(buf);
+                uart2_sendString(buf);
             }
         }
 
@@ -196,13 +206,16 @@ void System_Init(void)//系统初始化
     IMU_Init();
     sendCaliYawCommand();
 
+    //Zigbee占用串口2
+    //Zigbee_Init();
+
+    //视觉占用串口3
+    MAIXCAM_Init();
+
     //角度环初始化：锁定0°航向
     YawPID_Init(YAW_KP, YAW_KI, YAW_KD);
     YawPID_SetTarget(0.0f);
     YawPID_Enable(true);
-
-    //Zigbee占用串口1
-    //Zigbee_Init();
 
     Mode=Mode_Track;
     Turn_State = TURN_None;
@@ -249,7 +262,8 @@ void Show_Init(void)//显示初始化
     LCD_ShowString(170,80,"KD:",BLUE,BLACK,16,0);
     LCD_ShowString(30,100,"TRACK:",WHITE,BLACK,16,0); 
     LCD_ShowString(120,100,"Distance:",WHITE,BLACK,16,0); 
-    LCD_ShowString(30,120,"Yaw:",WHITE,BLACK,16,0); 
+    LCD_ShowString(30,120,"Yaw:",WHITE,BLACK,16,0);
+    LCD_ShowString(30,140,"MAIX:",MAGENTA,BLACK,16,0);
 }
 
 void ALL_Init(void)//全局初始化
@@ -273,9 +287,7 @@ void Show_Update(void)//显示更新
     LCD_ShowIntNum(90, 100, Track_Value , 2, WHITE, BLACK, 16);
     LCD_ShowIntNum(200, 100, Distance, 6, WHITE, BLACK, 16);
     LCD_ShowIntNum(70, 120, Yaw_Value, 6, WHITE, BLACK, 16);
-    LCD_ShowFloatNum(30,140,zigbee_data[0],1,2,BLUE,BLACK,16);
-    LCD_ShowFloatNum(100,140,zigbee_data[1],1,3,BLUE,BLACK,16);
-    LCD_ShowFloatNum(170,140,zigbee_data[2],1,3,BLUE,BLACK,16);
+    LCD_ShowIntNum(90, 140, maixcam_data, 8, MAGENTA, BLACK, 16);
 }
 
 void Velocity_Get(void)//计算轮子速度
