@@ -9,6 +9,7 @@
 "./BPS/src/ENCODER.o"
 "./BPS/src/IMU.o"
 "./BPS/src/KEY.o"
+"./BPS/src/MAGENT.o"
 "./BPS/src/MAXICAM.o"
 "./BPS/src/MOTOR.o"
 "./BPS/src/TRACK.o"

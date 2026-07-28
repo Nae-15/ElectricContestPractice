@@ -18,6 +18,7 @@ const GPIO5   = GPIO.addInstance();
 const GPIO6   = GPIO.addInstance();
 const GPIO7   = GPIO.addInstance();
 const GPIO8   = GPIO.addInstance();
+const GPIO9   = GPIO.addInstance();
 const NONMAIN = scripting.addModule("/ti/driverlib/NONMAIN");
 const PWM     = scripting.addModule("/ti/driverlib/PWM", {}, false);
 const PWM1    = PWM.addInstance();
@@ -199,6 +200,11 @@ GPIO8.associatedPins[0].$name        = "Pin";
 GPIO8.associatedPins[0].assignedPin  = "17";
 GPIO8.associatedPins[0].initialValue = "SET";
 GPIO8.associatedPins[0].pin.$assign  = "PA17";
+
+GPIO9.port                          = "PORTA";
+GPIO9.$name                         = "MAGENT";
+GPIO9.associatedPins[0].$name       = "PIn";
+GPIO9.associatedPins[0].pin.$assign = "PA30";
 
 NONMAIN.nonmainWarning = true;
 NONMAIN.bslMode        = false;

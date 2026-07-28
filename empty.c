@@ -10,6 +10,7 @@
 #include "BPS/inc/ZIGBEE.h"
 #include "BPS/inc/BLINK.h"
 #include "BPS/inc/MAIXCAM.h"
+#include "BPS/inc/MAGENT.h"
 
 typedef struct//车轮结构体
 {
@@ -127,16 +128,13 @@ void Run_AngleHold(float Target_Yaw);   //角度环维持模式
 void Run_Turn(void);                    //原地直角转弯
 
 int main(void)
-{
+{   
     ALL_Init();
+    Magent_On();
     while(1)
     {
-        BUZZER_Blink();
-        LED_Blink();
-
         Show_Update();
 
-        // 视觉数据就绪 → 消费并清零标志
         if (maixcam_rx_ready)
         {
             maixcam_rx_ready = 0;

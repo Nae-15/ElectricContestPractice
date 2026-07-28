@@ -196,6 +196,12 @@ extern "C" {
 /* Defines for Pin: GPIOA.17 with pinCMx 39 on package pin 10 */
 #define LED_Pin_PIN                                             (DL_GPIO_PIN_17)
 #define LED_Pin_IOMUX                                            (IOMUX_PINCM39)
+/* Port definition for Pin Group MAGENT */
+#define MAGENT_PORT                                                      (GPIOA)
+
+/* Defines for PIn: GPIOA.30 with pinCMx 5 on package pin 37 */
+#define MAGENT_PIn_PIN                                          (DL_GPIO_PIN_30)
+#define MAGENT_PIn_IOMUX                                          (IOMUX_PINCM5)
 /* Defines for AIN1: GPIOB.19 with pinCMx 45 on package pin 16 */
 #define TB6612_AIN1_PORT                                                 (GPIOB)
 #define TB6612_AIN1_PIN                                         (DL_GPIO_PIN_19)
