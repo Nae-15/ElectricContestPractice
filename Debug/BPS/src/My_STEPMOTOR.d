@@ -1,7 +1,7 @@
 # FIXED
 
-BPS/src/MAGENT.o: ../BPS/src/MAGENT.c \
- E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/MAGENT.h \
+BPS/src/My_STEPMOTOR.o: ../BPS/src/My_STEPMOTOR.C \
+ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/My_STEPMOTOR.h \
  ti_msp_dl_config.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/msp/msp.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/DeviceFamily.h \
@@ -84,8 +84,10 @@ BPS/src/MAGENT.o: ../BPS/src/MAGENT.c \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_vref.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_wwdt.h \
  E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_interrupt.h \
- E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h
-E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/MAGENT.h:
+ E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h \
+ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h \
+ E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/STEP_MOTOR.h
+E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/My_STEPMOTOR.h:
 ti_msp_dl_config.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/msp/msp.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/devices/DeviceFamily.h:
@@ -169,3 +171,5 @@ E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_vref.
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/dl_wwdt.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_interrupt.h:
 E:/SDK/Ti/mspm0_sdk_2_10_00_04/mspm0_sdk_2_11_00_07/source/ti/driverlib/m0p/dl_systick.h:
+E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/Board/board.h:
+E:/Code/Project-MSPM0G3507/ElcContestTest/BPS/inc/STEP_MOTOR.h:

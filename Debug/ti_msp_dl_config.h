@@ -160,6 +160,22 @@ extern "C" {
 #define UART_3_BAUD_RATE                                                (115200)
 #define UART_3_IBRD_4_MHZ_115200_BAUD                                        (2)
 #define UART_3_FBRD_4_MHZ_115200_BAUD                                       (11)
+/* Defines for UART_1 */
+#define UART_1_INST                                                        UART1
+#define UART_1_INST_FREQUENCY                                            4000000
+#define UART_1_INST_IRQHandler                                  UART1_IRQHandler
+#define UART_1_INST_INT_IRQN                                      UART1_INT_IRQn
+#define GPIO_UART_1_RX_PORT                                                GPIOA
+#define GPIO_UART_1_TX_PORT                                                GPIOA
+#define GPIO_UART_1_RX_PIN                                        DL_GPIO_PIN_18
+#define GPIO_UART_1_TX_PIN                                         DL_GPIO_PIN_8
+#define GPIO_UART_1_IOMUX_RX                                     (IOMUX_PINCM40)
+#define GPIO_UART_1_IOMUX_TX                                     (IOMUX_PINCM19)
+#define GPIO_UART_1_IOMUX_RX_FUNC                      IOMUX_PINCM40_PF_UART1_RX
+#define GPIO_UART_1_IOMUX_TX_FUNC                      IOMUX_PINCM19_PF_UART1_TX
+#define UART_1_BAUD_RATE                                                (115200)
+#define UART_1_IBRD_4_MHZ_115200_BAUD                                        (2)
+#define UART_1_FBRD_4_MHZ_115200_BAUD                                       (11)
 
 
 
@@ -196,12 +212,6 @@ extern "C" {
 /* Defines for Pin: GPIOA.17 with pinCMx 39 on package pin 10 */
 #define LED_Pin_PIN                                             (DL_GPIO_PIN_17)
 #define LED_Pin_IOMUX                                            (IOMUX_PINCM39)
-/* Port definition for Pin Group MAGENT */
-#define MAGENT_PORT                                                      (GPIOA)
-
-/* Defines for PIn: GPIOA.30 with pinCMx 5 on package pin 37 */
-#define MAGENT_PIn_PIN                                          (DL_GPIO_PIN_30)
-#define MAGENT_PIn_IOMUX                                          (IOMUX_PINCM5)
 /* Defines for AIN1: GPIOB.19 with pinCMx 45 on package pin 16 */
 #define TB6612_AIN1_PORT                                                 (GPIOB)
 #define TB6612_AIN1_PIN                                         (DL_GPIO_PIN_19)
@@ -314,6 +324,7 @@ void SYSCFG_DL_TIMER_TICK_init(void);
 void SYSCFG_DL_UART_0_init(void);
 void SYSCFG_DL_UART_2_init(void);
 void SYSCFG_DL_UART_3_init(void);
+void SYSCFG_DL_UART_1_init(void);
 void SYSCFG_DL_SPI_LCD_init(void);
 
 

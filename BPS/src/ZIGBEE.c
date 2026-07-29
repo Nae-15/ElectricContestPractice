@@ -4,6 +4,8 @@
 volatile float zigbee_data[3] = {0};
 volatile uint8_t rx_debug_flag;
 
+/*
+
 void Zigbee_Init(void)
 {
     UART2_Init();
@@ -19,7 +21,6 @@ void UART_2_INST_IRQHandler(void)
     {
         case DL_UART_IIDX_RX://如果是接收中断
         {
-            /*
             rx_debug_flag = 1;
             char ch = (char)DL_UART_Main_receiveData(UART_2_INST);
             if (ch == '\n')
@@ -32,11 +33,12 @@ void UART_2_INST_IRQHandler(void)
             {
                 rx_buf[rx_idx++] = ch;
             }
-            break;
-            */
+            break;   
         }
 
         default://其他的串口中断
         break;
     }
 }
+
+*/

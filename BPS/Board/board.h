@@ -3,6 +3,9 @@
 
 #include "ti_msp_dl_config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifndef u8
 #define u8 uint8_t
@@ -40,5 +43,9 @@ int lc_printf(char* format,...);
 /* 延时函数 */
 void Delay_us(int __us);
 void Delay_ms(int __ms);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
