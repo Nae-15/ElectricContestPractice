@@ -5,7 +5,6 @@
 "./BPS/Board/board.o"
 "./BPS/lcd/lcd.o"
 "./BPS/lcd/lcd_init.o"
-"./BPS/src/BLINK.o"
 "./BPS/src/ENCODER.o"
 "./BPS/src/IMU.o"
 "./BPS/src/KEY.o"

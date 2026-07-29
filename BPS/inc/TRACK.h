@@ -7,7 +7,6 @@
 #define Sensor_4 TRACKING_PIN_4_PIN
 #define Sensor_5 TRACKING_PIN_5_PIN
 #define Sensor_6 TRACKING_PIN_6_PIN
-#define Sensor_7 TRACKING_PIN_7_PIN
 
 #include "ti_msp_dl_config.h"
 

@@ -9,7 +9,6 @@ C_UPPER_SRCS += \
 ../BPS/src/My_STEPMOTOR.C 
 
 C_SRCS += \
-../BPS/src/BLINK.c \
 ../BPS/src/ENCODER.c \
 ../BPS/src/IMU.c \
 ../BPS/src/KEY.c \
@@ -24,7 +23,6 @@ C_UPPER_DEPS += \
 ./BPS/src/My_STEPMOTOR.d 
 
 C_DEPS += \
-./BPS/src/BLINK.d \
 ./BPS/src/ENCODER.d \
 ./BPS/src/IMU.d \
 ./BPS/src/KEY.d \
@@ -36,7 +34,6 @@ C_DEPS += \
 ./BPS/src/ZIGBEE.d 
 
 OBJS += \
-./BPS/src/BLINK.o \
 ./BPS/src/ENCODER.o \
 ./BPS/src/IMU.o \
 ./BPS/src/KEY.o \
@@ -49,7 +46,6 @@ OBJS += \
 ./BPS/src/ZIGBEE.o 
 
 OBJS__QUOTED += \
-"BPS\src\BLINK.o" \
 "BPS\src\ENCODER.o" \
 "BPS\src\IMU.o" \
 "BPS\src\KEY.o" \
@@ -62,7 +58,6 @@ OBJS__QUOTED += \
 "BPS\src\ZIGBEE.o" 
 
 C_DEPS__QUOTED += \
-"BPS\src\BLINK.d" \
 "BPS\src\ENCODER.d" \
 "BPS\src\IMU.d" \
 "BPS\src\KEY.d" \
@@ -77,7 +72,6 @@ C_UPPER_DEPS__QUOTED += \
 "BPS\src\My_STEPMOTOR.d" 
 
 C_SRCS__QUOTED += \
-"../BPS/src/BLINK.c" \
 "../BPS/src/ENCODER.c" \
 "../BPS/src/IMU.c" \
 "../BPS/src/MAXICAM.c" \

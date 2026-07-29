@@ -8,7 +8,6 @@
 #include "BPS/inc/TRACK.h"
 #include "BPS/inc/YAW_PID.h"
 #include "BPS/inc/ZIGBEE.h"
-#include "BPS/inc/BLINK.h"
 #include "BPS/inc/MAIXCAM.h"
 #include "BPS/inc/My_STEPMOTOR.h"
 
@@ -34,8 +33,8 @@ uint8_t Mode;
 #define Mode_AngleHold 2
 
 //-----------电机编码器----------------
-#define Encoder_Gear_Ratio 20 //减速比1:20
-#define Wheel_Radius 24 //轮子半径，单位为mm
+#define Encoder_Gear_Ratio 28 //减速比1:28
+#define Wheel_Radius 33 //轮子半径，单位为mm
 #define Encoder_Pulses_Per_Revolution 13 //编码器每转一圈的脉冲数
 #define Pi 3.14
 
@@ -57,7 +56,7 @@ int32_t Distance;
 
 //-----------循迹-------------------
 uint8_t Track_Value;
-#define TRACK_CENTER    40.0f     // 7路传感器中心加权值（传感器4居中）
+#define TRACK_CENTER    35.0f     // 6路传感器中心加权值（传感器3-4之间）
 #define TRACK_KP        20.0f     // 寻线比例系数（速度差/偏差单位，降低防振荡）
 
 #define TRACK_BASE_SPEED      1000.0f   //寻线基础速度（降速增加直角弯反应时间）
@@ -111,8 +110,6 @@ void Run_AngleHold(float Target_Yaw);   //角度环维持模式
 int main(void)
 {   
     ALL_Init();
-
-    StepMotor_Init();
     /* 2. 转一圈：CW，3200 脉冲，相对当前位置 */
     zdt_emm_position_pulses_no_reply(STEP_MOTOR_UART, STEP_MOTOR_ADDR,
                 ZDT_EMM_DIR_CW, MOTOR_RPM, MOTOR_ACC,
@@ -201,6 +198,9 @@ void System_Init(void)//系统初始化
     YawPID_SetTarget(0.0f);
     YawPID_Enable(true);
 
+    //步进电机初始化
+    StepMotor_Init();
+
     Mode=Mode_Track;
 }
 
@@ -247,6 +247,7 @@ void Show_Init(void)//显示初始化
     LCD_ShowString(120,100,"Distance:",WHITE,BLACK,16,0); 
     LCD_ShowString(30,120,"Yaw:",WHITE,BLACK,16,0);
     LCD_ShowString(30,140,"MAIX:",MAGENTA,BLACK,16,0);
+    LCD_ShowString(30,160,"PA15:",WHITE,BLACK,16,0);
 }
 
 void ALL_Init(void)//全局初始化
@@ -271,6 +272,9 @@ void Show_Update(void)//显示更新
     LCD_ShowIntNum(200, 100, Distance, 6, WHITE, BLACK, 16);
     LCD_ShowIntNum(70, 120, Yaw_Value, 6, WHITE, BLACK, 16);
     LCD_ShowIntNum(90, 140, maixcam_data, 8, MAGENTA, BLACK, 16);
+    LCD_ShowIntNum(90, 160,
+        (DL_GPIO_readPins(GPIOA, DL_GPIO_PIN_15) != 0) ? 1 : 0,
+        1, WHITE, BLACK, 16);
 }
 
 void Velocity_Get(void)//计算轮子速度
