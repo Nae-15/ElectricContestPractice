@@ -110,17 +110,6 @@ void Run_AngleHold(float Target_Yaw);   //角度环维持模式
 int main(void)
 {   
     ALL_Init();
-    /* 2. 转一圈：CW，3200 脉冲，相对当前位置 */
-    zdt_emm_position_pulses_no_reply(STEP_MOTOR_UART, STEP_MOTOR_ADDR,
-                ZDT_EMM_DIR_CW, MOTOR_RPM, MOTOR_ACC,
-                PULSES_PER_REV,
-                ZDT_EMM_MOVE_REL_CURRENT, ZDT_EMM_EXEC_NOW);
-
-    /* 清空电机回复数据，防止 RX FIFO 累积 */
-    while (!DL_UART_Main_isRXFIFOEmpty(UART_2_INST)) {
-        (void)DL_UART_Main_receiveData(UART_2_INST);
-    }
-
     while(1)
     {
         Show_Update();
@@ -139,11 +128,11 @@ int main(void)
             // Zigbee串口1发送（Track_Value由Run_Track每帧更新）
             {
                 char buf[64];
-                sprintf(buf, "%d,%.0f,%.0f\n",
+                sprintf(buf, "%d,%f,%f\n",
                         Track_Value,
                         Wheel_Left.Velocity,
                         Wheel_Right.Velocity);
-                uart2_sendString(buf);
+                uart1_sendString(buf);
             }
         }
 
@@ -187,8 +176,8 @@ void System_Init(void)//系统初始化
     IMU_Init();
     sendCaliYawCommand();
 
-    //Zigbee占用串口2
-    //Zigbee_Init();
+    //Zigbee占用串口1
+    Zigbee_Init();
 
     //视觉占用串口3
     MAIXCAM_Init();
@@ -247,7 +236,8 @@ void Show_Init(void)//显示初始化
     LCD_ShowString(120,100,"Distance:",WHITE,BLACK,16,0); 
     LCD_ShowString(30,120,"Yaw:",WHITE,BLACK,16,0);
     LCD_ShowString(30,140,"MAIX:",MAGENTA,BLACK,16,0);
-    LCD_ShowString(30,160,"PA15:",WHITE,BLACK,16,0);
+    LCD_ShowString(30,160,"PB1:",WHITE,BLACK,16,0);
+    LCD_ShowString(30,180,"TrBits:",WHITE,BLACK,16,0);
 }
 
 void ALL_Init(void)//全局初始化
@@ -272,9 +262,10 @@ void Show_Update(void)//显示更新
     LCD_ShowIntNum(200, 100, Distance, 6, WHITE, BLACK, 16);
     LCD_ShowIntNum(70, 120, Yaw_Value, 6, WHITE, BLACK, 16);
     LCD_ShowIntNum(90, 140, maixcam_data, 8, MAGENTA, BLACK, 16);
-    LCD_ShowIntNum(90, 160,
-        (DL_GPIO_readPins(GPIOA, DL_GPIO_PIN_15) != 0) ? 1 : 0,
+    LCD_ShowIntNum(70, 160,
+        (DL_GPIO_readPins(GPIOB, DL_GPIO_PIN_1) != 0) ? 1 : 0,
         1, WHITE, BLACK, 16);
+    LCD_ShowBinNum(100, 180, Track_GetBits(), WHITE, BLACK, 16);
 }
 
 void Velocity_Get(void)//计算轮子速度

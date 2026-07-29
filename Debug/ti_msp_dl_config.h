@@ -256,24 +256,24 @@ extern "C" {
 /* Port definition for Pin Group TRACKING */
 #define TRACKING_PORT                                                    (GPIOB)
 
-/* Defines for PIN_1: GPIOB.25 with pinCMx 56 on package pin 27 */
-#define TRACKING_PIN_1_PIN                                      (DL_GPIO_PIN_25)
-#define TRACKING_PIN_1_IOMUX                                     (IOMUX_PINCM56)
-/* Defines for PIN_2: GPIOB.18 with pinCMx 44 on package pin 15 */
-#define TRACKING_PIN_2_PIN                                      (DL_GPIO_PIN_18)
-#define TRACKING_PIN_2_IOMUX                                     (IOMUX_PINCM44)
-/* Defines for PIN_3: GPIOB.21 with pinCMx 49 on package pin 20 */
-#define TRACKING_PIN_3_PIN                                      (DL_GPIO_PIN_21)
-#define TRACKING_PIN_3_IOMUX                                     (IOMUX_PINCM49)
-/* Defines for PIN_4: GPIOB.22 with pinCMx 50 on package pin 21 */
-#define TRACKING_PIN_4_PIN                                      (DL_GPIO_PIN_22)
-#define TRACKING_PIN_4_IOMUX                                     (IOMUX_PINCM50)
-/* Defines for PIN_5: GPIOB.0 with pinCMx 12 on package pin 47 */
-#define TRACKING_PIN_5_PIN                                       (DL_GPIO_PIN_0)
-#define TRACKING_PIN_5_IOMUX                                     (IOMUX_PINCM12)
-/* Defines for PIN_6: GPIOB.1 with pinCMx 13 on package pin 48 */
-#define TRACKING_PIN_6_PIN                                       (DL_GPIO_PIN_1)
-#define TRACKING_PIN_6_IOMUX                                     (IOMUX_PINCM13)
+/* Defines for PIN_1: GPIOB.1 with pinCMx 13 on package pin 48 */
+#define TRACKING_PIN_1_PIN                                       (DL_GPIO_PIN_1)
+#define TRACKING_PIN_1_IOMUX                                     (IOMUX_PINCM13)
+/* Defines for PIN_2: GPIOB.0 with pinCMx 12 on package pin 47 */
+#define TRACKING_PIN_2_PIN                                       (DL_GPIO_PIN_0)
+#define TRACKING_PIN_2_IOMUX                                     (IOMUX_PINCM12)
+/* Defines for PIN_3: GPIOB.22 with pinCMx 50 on package pin 21 */
+#define TRACKING_PIN_3_PIN                                      (DL_GPIO_PIN_22)
+#define TRACKING_PIN_3_IOMUX                                     (IOMUX_PINCM50)
+/* Defines for PIN_4: GPIOB.21 with pinCMx 49 on package pin 20 */
+#define TRACKING_PIN_4_PIN                                      (DL_GPIO_PIN_21)
+#define TRACKING_PIN_4_IOMUX                                     (IOMUX_PINCM49)
+/* Defines for PIN_5: GPIOB.18 with pinCMx 44 on package pin 15 */
+#define TRACKING_PIN_5_PIN                                      (DL_GPIO_PIN_18)
+#define TRACKING_PIN_5_IOMUX                                     (IOMUX_PINCM44)
+/* Defines for PIN_6: GPIOB.25 with pinCMx 56 on package pin 27 */
+#define TRACKING_PIN_6_PIN                                      (DL_GPIO_PIN_25)
+#define TRACKING_PIN_6_IOMUX                                     (IOMUX_PINCM56)
 /* Port definition for Pin Group IIC_Software */
 #define IIC_Software_PORT                                                (GPIOA)
 

@@ -24,10 +24,12 @@ extern "C" {
 #endif
 
 void UART0_Init(void);
+void UART1_Init(void);
 void UART2_Init(void);
 void UART3_Init(void);
 
 void uart0_sendString(char* str);
+void uart1_sendString(char* str);
 void uart2_sendString(char* str);
 
 int LOG_Debug_Out(const char* __file, const char* __func, int __line, const char* format, ...);

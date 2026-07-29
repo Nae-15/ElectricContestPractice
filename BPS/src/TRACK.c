@@ -4,43 +4,43 @@ uint8_t Track_Get(void)
     static uint8_t Track_Value = 0;
     uint8_t Left1=0,Left2=0,Left3=0,Right1=0,Right2=0,Right3=0;
     uint8_t Track_Count = 0;
-    // 读取PIN_1状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_1_PIN))
+    // 读取PIN_1状态（低电平=检测到黑线）
+    if(DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_1_PIN))
     {
         Left1 = 1;
         Track_Count++;
     }
 
-    // 读取PIN_2状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_2_PIN))
+    // 读取PIN_2状态（低电平=检测到黑线）
+    if(DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_2_PIN))
     {
         Left2 = 1;
         Track_Count++;
     }
 
-    // 读取PIN_3状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_3_PIN))
+    // 读取PIN_3状态（低电平=检测到黑线）
+    if(DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_3_PIN))
     {
         Left3 = 1;
         Track_Count++;
     }
 
-    // 读取PIN_4状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_4_PIN))
+    // 读取PIN_4状态（低电平=检测到黑线）
+    if(DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_4_PIN))
     {
         Right1 = 1;
         Track_Count++;
     }
 
-    // 读取PIN_5状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_5_PIN))
+    // 读取PIN_5状态（低电平=检测到黑线）
+    if(DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_5_PIN))
     {
         Right2 = 1;
         Track_Count++;
     }
 
-    // 读取PIN_6状态
-    if( DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_6_PIN))
+    // 读取PIN_6状态（低电平=检测到黑线）
+    if(DL_GPIO_readPins(TRACKING_PORT, TRACKING_PIN_6_PIN))
     {
         Right3 = 1;
         Track_Count++;
@@ -50,11 +50,7 @@ uint8_t Track_Get(void)
     {
         Track_Value=0;
     }
-    else if (Track_Count ==6 )//全压线状态
-    {
-
-    }
-    else//普通循迹状态
+    else//有传感器检测到线，加权平均计算位置
     {
         Track_Value = (Left1*1+Left2*2+Left3*3+Right1*4+Right2*5+Right3*6) *10 /Track_Count;
     }

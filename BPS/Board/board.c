@@ -26,6 +26,27 @@ void UART0_Init(void)
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
 }
 
+void UART1_Init(void)
+{
+    while(DL_UART_Main_isRXFIFOEmpty(UART_1_INST) == false)
+    {
+        DL_UART_Main_receiveData(UART_1_INST);
+    }
+    // 清除所有UART中断标志（溢出、帧错误等），防止UART硬件锁死
+    DL_UART_Main_clearInterruptStatus(UART_1_INST,
+        DL_UART_MAIN_INTERRUPT_RX |
+        DL_UART_MAIN_INTERRUPT_OVERRUN_ERROR |
+        DL_UART_MAIN_INTERRUPT_FRAMING_ERROR |
+        DL_UART_MAIN_INTERRUPT_PARITY_ERROR |
+        DL_UART_MAIN_INTERRUPT_BREAK_ERROR |
+        DL_UART_MAIN_INTERRUPT_RX_TIMEOUT_ERROR |
+        DL_UART_MAIN_INTERRUPT_NOISE_ERROR);
+    // 清除NVIC挂起的中断
+    NVIC_ClearPendingIRQ(UART_1_INST_INT_IRQN);
+    // 使能串口中断
+    NVIC_EnableIRQ(UART_1_INST_INT_IRQN);
+}
+
 void UART2_Init(void)
 {
     while(DL_UART_Main_isRXFIFOEmpty(UART_2_INST) == false) 
@@ -99,6 +120,27 @@ void uart0_sendString(char* str)
     {
         //发送字符串首地址中的字符，并且在发送完成之后首地址自增
         uart0_sendChar(*str++);
+    }
+}
+
+#ifdef UART_1_INST
+static void uart1_sendChar(uint8_t dat)
+{
+    while( DL_UART_isBusy(UART_1_INST) == true );
+    DL_UART_Main_transmitData(UART_1_INST, dat);
+}
+#else
+static void uart1_sendChar(uint8_t dat)
+{
+    (void)dat;
+}
+#endif
+
+void uart1_sendString(char* str)
+{
+    while( *str!=0 && str!=0 )
+    {
+        uart1_sendChar(*str++);
     }
 }
 
