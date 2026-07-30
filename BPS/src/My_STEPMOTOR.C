@@ -33,3 +33,212 @@ void StepMotor_Init(void)
         (void)DL_UART_Main_receiveData(UART_2_INST);
     }
 }
+
+/**
+ * @brief 相对当前位置旋转指定角度（0.1度单位）
+ */
+zdt_emm_result_t StepMotor_MoveRelativeAngle(zdt_emm_dir_t dir, uint32_t deg_x10)
+{
+    uint32_t pulses = zdt_emm_degrees_to_pulses_x10(deg_x10, PULSES_PER_REV);
+
+    return zdt_emm_position_pulses(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        dir, MOTOR_RPM, MOTOR_ACC,
+        pulses,
+        ZDT_EMM_MOVE_REL_CURRENT,
+        ZDT_EMM_EXEC_NOW,
+        MOTOR_TIMEOUT_US);
+}
+
+/**
+ * @brief 旋转到绝对零点位置（需先回零建立零点参考）
+ */
+zdt_emm_result_t StepMotor_MoveToAbsoluteAngle(uint32_t deg_x10)
+{
+    uint32_t pulses = zdt_emm_degrees_to_pulses_x10(deg_x10, PULSES_PER_REV);
+
+    return zdt_emm_position_pulses(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        ZDT_EMM_DIR_CW,
+        MOTOR_RPM, MOTOR_ACC,
+        pulses,
+        ZDT_EMM_MOVE_ABS_ZERO,
+        ZDT_EMM_EXEC_NOW,
+        MOTOR_TIMEOUT_US);
+}
+
+/**
+ * @brief 立即停止电机运动（保持力矩不释放）
+ */
+zdt_emm_result_t StepMotor_Stop(void)
+{
+    return zdt_emm_stop(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        ZDT_EMM_EXEC_NOW, MOTOR_TIMEOUT_US);
+}
+
+/**
+ * @brief 将当前电机位置清零（设为新的绝对零点）
+ */
+zdt_emm_result_t StepMotor_ZeroPosition(void)
+{
+    return zdt_emm_zero_position(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR, MOTOR_TIMEOUT_US);
+}
+
+/**
+ * @brief 执行回零操作（以最近碰撞点为参考，超时 5 秒）
+ */
+zdt_emm_result_t StepMotor_Home(void)
+{
+    return zdt_emm_home(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        ZDT_EMM_HOME_NEAREST,
+        ZDT_EMM_EXEC_NOW,
+        5000000U);
+}
+
+/**
+ * @brief 配置快速位置模式参数（配合 StepMotor_QuickMoveByPulses 使用）
+ */
+zdt_emm_result_t StepMotor_QuickConfig(zdt_emm_move_mode_t mode)
+{
+    return zdt_emm_quick_position_config(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        MOTOR_RPM, MOTOR_ACC,
+        mode,
+        ZDT_EMM_EXEC_NOW,
+        MOTOR_TIMEOUT_US);
+}
+
+/**
+ * @brief 快速位置运动（需先调用 StepMotor_QuickConfig）
+ */
+zdt_emm_result_t StepMotor_QuickMoveByPulses(int32_t pulses)
+{
+    return zdt_emm_quick_position_run(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        pulses, MOTOR_TIMEOUT_US);
+}
+
+/* ================================================================
+ * 读取函数 —— PID 闭环反馈
+ * ================================================================ */
+
+/**
+ * @brief 读取单圈编码器原始值（0~65535 = 0°~360°）
+ */
+zdt_emm_result_t StepMotor_ReadEncoder(uint16_t *encoder)
+{
+    return zdt_emm_read_encoder_raw(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        encoder, MOTOR_TIMEOUT_US);
+}
+
+/**
+ * @brief 读取当前角度（0.1° 单位）
+ *
+ * 换算：deg_x10 = encoder * 3600 / 65536
+ */
+zdt_emm_result_t StepMotor_ReadAngle_x10(uint32_t *deg_x10)
+{
+    uint16_t encoder;
+    zdt_emm_result_t ret;
+
+    ret = zdt_emm_read_encoder_raw(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        &encoder, MOTOR_TIMEOUT_US);
+    if (ret == ZDT_EMM_RESULT_OK) {
+        /* encoder / 65536 * 3600 = encoder * 3600 / 65536 */
+        *deg_x10 = (uint32_t)(((uint32_t)encoder * 3600U + 32768U) / 65536U);
+    }
+    return ret;
+}
+
+/**
+ * @brief 读取电机状态标志（enabled / reached / stall / limit 等）
+ */
+zdt_emm_result_t StepMotor_ReadStatus(zdt_emm_status_flags_t *flags)
+{
+    return zdt_emm_read_status(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        flags, MOTOR_TIMEOUT_US);
+}
+
+/**
+ * @brief 快速查询是否已到达目标位置
+ */
+zdt_emm_result_t StepMotor_IsReached(bool *reached)
+{
+    zdt_emm_status_flags_t flags;
+    zdt_emm_result_t ret;
+
+    ret = zdt_emm_read_status(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        &flags, MOTOR_TIMEOUT_US);
+    if (ret == ZDT_EMM_RESULT_OK) {
+        *reached = flags.reached;
+    }
+    return ret;
+}
+
+/* ================================================================
+ * 速度模式 —— PID 连续输出
+ * ================================================================ */
+
+/**
+ * @brief 速度模式运行（阻塞）
+ */
+zdt_emm_result_t StepMotor_RunSpeed(zdt_emm_dir_t dir, uint16_t rpm)
+{
+    return zdt_emm_speed(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        dir, rpm, MOTOR_ACC,
+        ZDT_EMM_EXEC_NOW, MOTOR_TIMEOUT_US);
+}
+
+/**
+ * @brief 速度模式运行（非阻塞，PID 内环推荐）
+ */
+zdt_emm_result_t StepMotor_RunSpeed_NoReply(zdt_emm_dir_t dir, uint16_t rpm)
+{
+    return zdt_emm_speed_no_reply(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        dir, rpm, MOTOR_ACC,
+        ZDT_EMM_EXEC_NOW);
+}
+
+/* ================================================================
+ * 非阻塞位置运动 —— PID 内环不下发完整脉冲，改为微调
+ * ================================================================ */
+
+/**
+ * @brief 相对角度运动（非阻塞）
+ */
+zdt_emm_result_t StepMotor_MoveRelativeAngle_NoReply(zdt_emm_dir_t dir, uint32_t deg_x10)
+{
+    uint32_t pulses = zdt_emm_degrees_to_pulses_x10(deg_x10, PULSES_PER_REV);
+
+    return zdt_emm_position_pulses_no_reply(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        dir, MOTOR_RPM, MOTOR_ACC,
+        pulses,
+        ZDT_EMM_MOVE_REL_CURRENT,
+        ZDT_EMM_EXEC_NOW);
+}
+
+/**
+ * @brief 绝对角度运动（非阻塞）
+ */
+zdt_emm_result_t StepMotor_MoveToAbsoluteAngle_NoReply(uint32_t deg_x10)
+{
+    uint32_t pulses = zdt_emm_degrees_to_pulses_x10(deg_x10, PULSES_PER_REV);
+
+    return zdt_emm_position_pulses_no_reply(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        ZDT_EMM_DIR_CW,
+        MOTOR_RPM, MOTOR_ACC,
+        pulses,
+        ZDT_EMM_MOVE_ABS_ZERO,
+        ZDT_EMM_EXEC_NOW);
+}

@@ -107,6 +107,58 @@ void Run_Stop(void);                    //停止模式
 void Run_Track(void);                   //沿线循迹模式
 void Run_AngleHold(float Target_Yaw);   //角度环维持模式
 
+
+
+
+int main(void)
+{   
+    __enable_irq();//MSPM0 Boot ROM 冷启动后关闭了全局中断，启动代码未重新打开，加入 __enable_irq() 确保所有外设中断可用。
+
+    SYSCFG_DL_init();
+ 
+    //系统计时中断
+    NVIC_ClearPendingIRQ(TIMER_TICK_INST_INT_IRQN);
+    NVIC_EnableIRQ(TIMER_TICK_INST_INT_IRQN);
+    
+    LCD_Init();
+    LCD_Fill(0, 0, 300, LCD_H, BLACK);
+
+    //步进电机初始化
+    StepMotor_Init();
+    LCD_ShowString(30, 20, "MOTOR INIT OK", GREEN, BLACK, 16, 0);
+
+    // 测试相对运动，捕获返回值用于诊断
+    {
+        zdt_emm_result_t ret;
+        char buf[32];
+
+        ret = StepMotor_MoveRelativeAngle(ZDT_EMM_DIR_CW, 450);
+        sprintf(buf, "Move +45deg: ret=%d", (int)ret);
+        LCD_ShowString(30, 50, buf, (ret == ZDT_EMM_RESULT_OK) ? GREEN : RED, BLACK, 16, 0);
+
+        Delay_ms(500);
+
+        ret = StepMotor_MoveRelativeAngle(ZDT_EMM_DIR_CCW, 900);
+        sprintf(buf, "Move -90deg: ret=%d", (int)ret);
+        LCD_ShowString(30, 75, buf, (ret == ZDT_EMM_RESULT_OK) ? GREEN : RED, BLACK, 16, 0);
+    }
+
+    // 返回值对照表
+    LCD_ShowString(30, 110, "0=OK 1=TIMEOUT 2=BAD_FRAME", YELLOW, BLACK, 16, 0);
+    LCD_ShowString(30, 130, "3=BAD_PARAM 4=LIMITED", YELLOW, BLACK, 16, 0);
+    LCD_ShowString(30, 150, "5=DEVICE_ERR 6=FORMAT_ERR", YELLOW, BLACK, 16, 0);
+
+    while(1)
+    {
+
+    }
+}
+
+
+
+
+/*
+
 int main(void)
 {   
     ALL_Init();
@@ -156,6 +208,8 @@ int main(void)
         }
     }
 }
+
+*/
 
 void System_Init(void)//系统初始化
 {
