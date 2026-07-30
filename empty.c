@@ -98,14 +98,14 @@ float Target_Yaw;                   // 维持角度目标值
 // 输出: StepMotor_RunSpeed_NoReply() 速度模式
 // 目标: 手动给定(后续接外环 MAIXCAM)
 
-#define INNER_KP            6.0f       // P: RPM per deg_x10 error
-#define INNER_KI            0.3f       // I: 微幅慢积
-#define INNER_KD            3.0f       // D: 抑制超调
+#define INNER_KP            1.2f       // P: RPM per deg_x10 error (略升)
+#define INNER_KI            0.1f       // I: 微幅慢积
+#define INNER_KD            20.0f      // D: 抑制超调
 #define INNER_DEADBAND      15         // 死区 deg_x10 (=1.5度)
-#define INNER_MAX_RPM       400
-#define INNER_MIN_RPM       30
-#define INNER_I_MAX         80.0f
-#define INNER_PERIOD_MS     30         // 33Hz
+#define INNER_MAX_RPM       400        // 最大RPM
+#define INNER_MIN_RPM       20         // 最小RPM
+#define INNER_I_MAX         40.0f      // 积分限幅
+#define INNER_PERIOD_MS     15         // 66Hz
 
 float Inner_Target_x10  = 300.0f;       // 目标角度 *10
 float Inner_Current_x10 = 0.0f;       // 当前角度 *10
@@ -115,7 +115,8 @@ float Inner_Integral     = 0.0f;
 float Inner_Output       = 0.0f;       // RPM(带符号)
 int   Inner_LastTime     = 0;
 int   Inner_Dir          = 0;          // 1=CW,-1=CCW,0=stop
-int   Inner_Status       = 0;          // PID 状态: 0=等周期 1=读编码器 2=OK -1=读失败
+int   Inner_Status       = 0;          // PID 状态
+int   Inner_Sent          = 0;          // SetTarget 结果: 0=未调用 1=已发送 2=死区 -1=读失败 -2=发送失败
 
 void System_Init(void);     //系统初始化
 void Data_Init(void);       //数据初始化
@@ -134,78 +135,50 @@ void Run_AngleHold(float Target_Yaw);   //角度环维持模式
 
 /**/
 
-// ==================== 内环 PID 函数 ====================
+// ==================== 内环 PID 函数（位置模式） ====================
 // 反馈: StepMotor_ReadAngle_x10() 电机编码器
-// 输出: StepMotor_RunSpeed_NoReply() 速度模式 RPM
-// 周期: INNER_PERIOD_MS (33Hz)
+// 策略: 直接发相对位置命令，电机自带加减速，无需速度环 PID
+//
+// TiltInner_Loop():  只读编码器更新状态，不发命令
+// TiltInner_SetTarget(): 计算误差，发一次性位置命令给电机执行
+
 void TiltInner_Loop(void)
 {
-    // 定时：到周期才执行
     if (time - Inner_LastTime < INNER_PERIOD_MS) { Inner_Status = 0; return; }
     Inner_LastTime = time;
-    Inner_Status = 1;  // 开始读编码器
+    Inner_Status = 1;
 
-    // ---- 读编码器反馈 ----
     int32_t deg;
     if (StepMotor_ReadAngle_x10(&deg) != ZDT_EMM_RESULT_OK) { Inner_Status = -1; return; }
     Inner_Current_x10 = (float)deg;
-    Inner_Status = 2;  // 读取成功
+    Inner_Error = Inner_Target_x10 - Inner_Current_x10;
+    Inner_Status = 2;
 
-    // ---- 计算误差 ----
-    Inner_LastError = Inner_Error;
+    // 更新输出显示（误差 * KP 作为参考）
+    Inner_Output = Inner_Error;
+}
+
+// 设置目标角度，发位置命令让电机自行到位
+void TiltInner_SetTarget(float degrees)
+{
+    Inner_Target_x10 = degrees * 10.0f;
+
+    // 读当前位置
+    int32_t cur;
+    if (StepMotor_ReadAngle_x10(&cur) != ZDT_EMM_RESULT_OK) { Inner_Sent = -1; return; }
+    Inner_Current_x10 = (float)cur;
     Inner_Error = Inner_Target_x10 - Inner_Current_x10;
 
     float abs_err = (Inner_Error > 0.0f) ? Inner_Error : -Inner_Error;
 
-    // ---- 死区：到位停转 ----
-    if (abs_err < (float)INNER_DEADBAND)
-    {
-        if (Inner_Dir != 0)
-        {
-            StepMotor_Stop_NoReply();
-            Inner_Dir = 0;
-        }
-        Inner_Output   = 0.0f;
-        Inner_Integral *= 0.7f;  // 衰减积分，静止不累积
-        return;
-    }
+    if (abs_err < (float)INNER_DEADBAND) { Inner_Sent = 2; Inner_Output = 0.0f; return; }
 
-    // ---- 抗积分饱和 ----
-    int at_pos = (Inner_Output >= INNER_MAX_RPM && Inner_Error > 0.0f);
-    int at_neg = (Inner_Output <= -INNER_MAX_RPM && Inner_Error < 0.0f);
-    if (!at_pos && !at_neg)
-    {
-        Inner_Integral += Inner_Error;
-        if (Inner_Integral >  INNER_I_MAX) Inner_Integral =  INNER_I_MAX;
-        if (Inner_Integral < -INNER_I_MAX) Inner_Integral = -INNER_I_MAX;
-    }
+    if (abs_err > 900.0f) abs_err = 900.0f;
 
-    // ---- PID 计算 ----
-    Inner_Output = INNER_KP * Inner_Error
-                 + INNER_KI * Inner_Integral
-                 + INNER_KD * (Inner_Error - Inner_LastError);
-
-    // ---- 输出限幅 ----
-    if (Inner_Output >  INNER_MAX_RPM) Inner_Output =  INNER_MAX_RPM;
-    if (Inner_Output < -INNER_MAX_RPM) Inner_Output = -INNER_MAX_RPM;
-
-    // ---- 最小 RPM 钳位 ----
-    float abs_out = (Inner_Output > 0.0f) ? Inner_Output : -Inner_Output;
-    if (abs_out > 0.0f && abs_out < (float)INNER_MIN_RPM)
-        Inner_Output = (Inner_Output > 0.0f) ? (float)INNER_MIN_RPM : (float)-INNER_MIN_RPM;
-
-    // ---- 发送速度命令 ----
-    zdt_emm_dir_t dir = (Inner_Output > 0.0f) ? ZDT_EMM_DIR_CW : ZDT_EMM_DIR_CCW;
-    uint16_t rpm = (uint16_t)((Inner_Output > 0.0f) ? Inner_Output : -Inner_Output);
-    StepMotor_RunSpeed_NoReply(dir, rpm);
-    Inner_Dir = (Inner_Output > 0.0f) ? 1 : -1;
-}
-
-// 设置目标角度（度），自动清积分
-void TiltInner_SetTarget(float degrees)
-{
-    Inner_Target_x10 = degrees * 10.0f;
-    Inner_Integral   = 0.0f;
+    zdt_emm_dir_t dir = (Inner_Error > 0.0f) ? ZDT_EMM_DIR_CW : ZDT_EMM_DIR_CCW;
+    zdt_emm_result_t r = StepMotor_MoveRelativeAngle(dir, (uint32_t)abs_err);
+    Inner_Sent = (r == ZDT_EMM_RESULT_OK) ? 1 : -2;
+    Inner_Output = Inner_Error;
 }
 
 int main(void)
@@ -227,6 +200,13 @@ int main(void)
 
     TiltInner_SetTarget(30.0f);
 
+    //Zigbee占用串口1
+    Zigbee_Init();
+
+    //视觉占用串口3
+    MAIXCAM_Init();
+    
+  
     while(1)
     {
         // ---- 内环 PID（33Hz 定时执行）----
@@ -245,13 +225,33 @@ int main(void)
         LCD_ShowString( 30, 90, "RPM:", MAGENTA, BLACK, 16, 0);
         LCD_ShowFloatNum(70, 90, Inner_Output, 4, 1, MAGENTA, BLACK, 16);
 
-        LCD_ShowString( 30,110, "Sta:", CYAN, BLACK, 16, 0);
-        LCD_ShowIntNum( 70,110, Inner_Status, 2, CYAN, BLACK, 16);
+        LCD_ShowString( 30,110, "Snt:", CYAN, BLACK, 16, 0);
+        LCD_ShowIntNum( 70,110, Inner_Sent, 2, CYAN, BLACK, 16);
         LCD_ShowIntNum(100,110, time, 6, CYAN, BLACK, 16);
+
+        LCD_ShowString( 30,130, "CAM:", MAGENTA, BLACK, 16, 0);
+        LCD_ShowIntNum( 70,130, maixcam_data, 8, MAGENTA, BLACK, 16);
+
+        // ---- UART1 发送 PID 数据 (每300ms) ----
+        {
+            static int last_send = 0;
+            if (time - last_send >= 300)
+            {
+                last_send = time;
+                char buf[64];
+                sprintf(buf, "%.1f,%.1f,%.1f,%.0f,%d,%ld\n",
+                    (double)(Inner_Target_x10 / 10.0f),
+                    (double)(Inner_Current_x10 / 10.0f),
+                    (double)(Inner_Error / 10.0f),
+                    (double)Inner_Output,
+                    Inner_Sent,
+                    (long)maixcam_data);
+                uart1_sendString(buf);
+            }
+        }
     }
+
 }
-
-
 
 
 /*
