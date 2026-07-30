@@ -32,6 +32,9 @@ uint8_t Mode;
 #define Mode_Track 1
 #define Mode_AngleHold 2
 
+//-------------验收问题----------------
+#define Question_2 2
+
 //-----------电机编码器----------------
 #define Encoder_Gear_Ratio 28 //减速比1:28
 #define Wheel_Radius 33 //轮子半径，单位为mm
@@ -40,12 +43,12 @@ uint8_t Mode;
 
 //------------速度-----------------
 #define Velocity_Ratio 0.8f //速度修正系数
-#define Velocity_Interval 50 //测速周期
+#define Velocity_Interval 25 //测速周期
 #define Velocity_Scale 3000 //速度放大系数，将脉冲/tick转为整数级读数
 volatile int32_t Velocity_Counter;
 
 //-------------时间-----------------
-int time;
+volatile int time;
 
 //-------------方向-----------------
 #define Forward 1
@@ -57,15 +60,18 @@ int32_t Distance;
 //-----------循迹-------------------
 uint8_t Track_Value;
 #define TRACK_CENTER    35.0f     // 6路传感器中心加权值（传感器3-4之间）
-#define TRACK_KP        20.0f     // 寻线比例系数（速度差/偏差单位，降低防振荡）
+#define TRACK_KP        40.0f     // 寻线比例系数（弯道靠降速，直道靠PD微调）
+#define TRACK_KD        30.0f     // 寻线微分系数
+#define TRACK_DEVIATION_THRESHOLD 10.0f   // 偏差阈值：>10才切弯道
 
-#define TRACK_BASE_SPEED      1000.0f   //寻线基础速度（降速增加直角弯反应时间）
-#define TRACK_LOST_SPEED      700.0f    //丢线时降速搜索
-#define TRACK_MAX_SPEED       2500.0f   //寻线最大速度限幅
-#define TRACK_MIN_SPEED       300.0f    //寻线最小速度限幅（防堵转）
+#define TRACK_BASE_SPEED      2500.0f   //寻线基础速度
+#define TRACK_SPEED_TURN      1500.0f   //弯道降速
+#define TRACK_LOST_SPEED      800.0f    //丢线时降速搜索
+#define TRACK_MAX_SPEED       4000.0f   //寻线最大速度限幅
+#define TRACK_MIN_SPEED       200.0f    //寻线最小速度限幅（弯道内侧轮减速）
 
 //-----------速度环PID--------------------
-float PID_KP = 0.10f;   // 比例系数（提高以加快轮速响应）
+float PID_KP = 0.18f;   // 比例系数（加快弯道响应）
 float PID_KI = 0.02f;   // 积分系数（极慢积分，减少稳态微振）
 float PID_KD = 0.0f;    // 微分系数
 
@@ -81,7 +87,7 @@ float PID_KD = 0.0f;    // 微分系数
 
 //-----------角度环PID--------------------
 float Yaw_Value;                    // 实测航向角
-#define YAW_KP            0.5f      // 角度环比例系数（降低防过冲）
+#define YAW_KP            0.15f      // 角度环比例系数（降低防过冲）
 #define YAW_KI            0.05f     // 角度环积分系数（提高克服死区）
 #define YAW_KD            1.0f      // 角度环微分系数（轻阻尼）
 #define YAW_OUTPUT_MAX    150.0f    // 角度环输出限幅（收窄范围）
@@ -131,6 +137,8 @@ void PID_Contorl(void);     //PID实际调用
 void Run_Stop(void);                    //停止模式
 void Run_Track(void);                   //沿线循迹模式
 void Run_AngleHold(float Target_Yaw);   //角度环维持模式
+
+void Mode_Question_Two(void);
 //ZDT_EMM_DIR_CCW 为实际负
 
 /**/
@@ -180,6 +188,8 @@ void TiltInner_SetTarget(float degrees)
     Inner_Sent = (r == ZDT_EMM_RESULT_OK) ? 1 : -2;
     Inner_Output = Inner_Error;
 }
+
+/*
 
 int main(void)
 {
@@ -252,9 +262,8 @@ int main(void)
     }
 
 }
+*/
 
-
-/*
 
 int main(void)
 {   
@@ -287,22 +296,15 @@ int main(void)
 
         switch (Mode)
         {
-            case Mode_Stop:
+            case Question_2:
             {
-                Run_Stop();
-                break;
-            }
-            case Mode_Track:    // 循迹模式
-            {
-                Run_Track();
+                Mode_Question_Two();
                 break;
             }
 
         }
     }
 }
-
-*/
 
 void System_Init(void)//系统初始化
 {
@@ -316,9 +318,6 @@ void System_Init(void)//系统初始化
     
     Encoder_Init();
     
-    LCD_Init();
-    LCD_Fill(0, 0, 300, LCD_H, BLACK);
-
     //IMU占用串口0
     IMU_Init();
     sendCaliYawCommand();
@@ -328,7 +327,8 @@ void System_Init(void)//系统初始化
 
     //视觉占用串口3
     MAIXCAM_Init();
-
+    
+    
     //角度环初始化：锁定0°航向
     YawPID_Init(YAW_KP, YAW_KI, YAW_KD);
     YawPID_SetTarget(0.0f);
@@ -337,7 +337,10 @@ void System_Init(void)//系统初始化
     //步进电机占用串口2
     StepMotor_Init();
 
-    Mode=Mode_Track;
+    Mode=Question_2;
+    
+    LCD_Init();
+    LCD_Fill(0, 0, 300, LCD_H, BLACK);
 }
 
 void Data_Init(void)//数据初始化
@@ -544,12 +547,18 @@ void Run_Track(void)//沿线循迹
         // 正 → 黑线偏右 → 左轮加速、右轮减速 → 车向右转
         // 负 → 黑线偏左 → 左轮减速、右轮加速 → 车向左转
         float Error = (float)Track_Value - TRACK_CENTER;
+        float dError = Error - Last_Error;   // 微分：误差变化率（先算再更新）
+        Last_Error = Error;
 
-        Last_Error = Error;// 记录偏差，供丢线时参考
+        // 自动判别直道/弯道：偏差大→降速过弯
+        float abs_err = (Error > 0.0f) ? Error : -Error;
+        float base_speed = (abs_err < TRACK_DEVIATION_THRESHOLD)
+                           ? TRACK_BASE_SPEED : TRACK_SPEED_TURN;
 
-        // 差速驱动：基础速度 ± 偏差修正
-        Wheel_Left.Velocity_Target  = TRACK_BASE_SPEED + Error * TRACK_KP;
-        Wheel_Right.Velocity_Target = TRACK_BASE_SPEED - Error * TRACK_KP;
+        // 差速驱动：P项(比例) + D项(微分阻尼)
+        float Correction = Error * TRACK_KP + dError * TRACK_KD;
+        Wheel_Left.Velocity_Target  = base_speed + Correction;
+        Wheel_Right.Velocity_Target = base_speed - Correction;
 
         // 速度限幅，防止极端偏差导致一侧停转或超速
         if(Wheel_Left.Velocity_Target > TRACK_MAX_SPEED)
@@ -613,6 +622,54 @@ void Run_AngleHold(float Target_Yaw)//角度环维持：双轮差速，原地保
         AO_Control(Rewerse, Pwm);
         BO_Control(Forward, Pwm);
     }
+}
+
+void Mode_Question_Two(void)
+{
+    static uint8_t track_done   = 0;
+    static int32_t dist_start   = 0;
+    static uint8_t need_snapshot = 1;
+
+    if (!track_done)
+    {
+        if (need_snapshot)
+        {
+            dist_start   = Distance;
+            need_snapshot = 0;
+        }
+
+        Run_Track();
+
+        if ((Distance - dist_start) >= 6140)
+        {
+            Run_Stop();
+            track_done = 1;
+        }
+    }
+    else
+    {
+        Run_Stop();
+    }
+}
+
+void Mode_Question_Three(void)
+{
+
+}
+
+void Mode_Question_Four(void)
+{
+
+}
+
+void Mode_Question_Five(void)
+{
+
+}
+
+void Mode_Question_Six(void)
+{
+
 }
 
 void TIMER_TICK_INST_IRQHandler(void)
