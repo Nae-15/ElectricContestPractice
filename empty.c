@@ -60,18 +60,18 @@ int32_t Distance;
 //-----------循迹-------------------
 uint8_t Track_Value;
 #define TRACK_CENTER    35.0f     // 6路传感器中心加权值（传感器3-4之间）
-#define TRACK_KP        40.0f     // 寻线比例系数（弯道靠降速，直道靠PD微调）
-#define TRACK_KD        30.0f     // 寻线微分系数
-#define TRACK_DEVIATION_THRESHOLD 10.0f   // 偏差阈值：>10才切弯道
+#define TRACK_KP        48.0f     // 寻线比例系数
+#define TRACK_KD        40.0f     // 寻线微分系数（加强阻尼）
+#define TRACK_DEVIATION_THRESHOLD  6.0f   // 偏差>6切弯道（Track≥41或≤29）
 
-#define TRACK_BASE_SPEED      2500.0f   //寻线基础速度
+#define TRACK_BASE_SPEED      2000.0f   //寻线基础速度
 #define TRACK_SPEED_TURN      1500.0f   //弯道降速
 #define TRACK_LOST_SPEED      800.0f    //丢线时降速搜索
 #define TRACK_MAX_SPEED       4000.0f   //寻线最大速度限幅
 #define TRACK_MIN_SPEED       200.0f    //寻线最小速度限幅（弯道内侧轮减速）
 
 //-----------速度环PID--------------------
-float PID_KP = 0.18f;   // 比例系数（加快弯道响应）
+float PID_KP = 0.22f;   // 比例系数（降低过冲）
 float PID_KI = 0.02f;   // 积分系数（极慢积分，减少稳态微振）
 float PID_KD = 0.0f;    // 微分系数
 
