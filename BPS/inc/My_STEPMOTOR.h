@@ -45,20 +45,20 @@ zdt_emm_result_t StepMotor_MoveToAbsoluteAngle(uint32_t deg_x10);
 zdt_emm_result_t StepMotor_Stop(void);
 
 /**
+ * @brief 立即停止电机运动（非阻塞，不等待回复）
+ *
+ * PID 内环使用，发完即返回，不阻塞控制循环。
+ *
+ * @return 命令帧已发送成功
+ */
+zdt_emm_result_t StepMotor_Stop_NoReply(void);
+
+/**
  * @brief 将当前电机位置清零（设为新的绝对零点）
  *
  * @return 命令执行结果
  */
 zdt_emm_result_t StepMotor_ZeroPosition(void);
-
-/**
- * @brief 执行回零操作（以最近碰撞点为参考）
- *
- * 回零完成前会阻塞，超时默认 5 秒。
- *
- * @return 命令执行结果
- */
-zdt_emm_result_t StepMotor_Home(void);
 
 /**
  * @brief 配置快速位置模式参数（配合 StepMotor_QuickMoveByPulses 使用）
@@ -89,12 +89,22 @@ zdt_emm_result_t StepMotor_QuickMoveByPulses(int32_t pulses);
 zdt_emm_result_t StepMotor_ReadEncoder(uint16_t *encoder);
 
 /**
- * @brief 读取当前角度（0.1° 单位，基于零点）
+ * @brief 读取逻辑位置（受 ZeroPosition 影响，设零后从 0 开始计数）
  *
- * @param deg_x10  输出：角度 ×10，如 900 = 90.0°
+ * 正转增加，反转减少。65536 单位 = 一圈 360°。
+ *
+ * @param position  输出：有符号逻辑位置
+ * @return          读取结果
+ */
+zdt_emm_result_t StepMotor_ReadPosition(int64_t *position);
+
+/**
+ * @brief 读取基于零点的当前角度（0.1° 单位）
+ *
+ * @param deg_x10  输出：角度 ×10，如 900 = 90.0°，负值 = 反转
  * @return         读取结果
  */
-zdt_emm_result_t StepMotor_ReadAngle_x10(uint32_t *deg_x10);
+zdt_emm_result_t StepMotor_ReadAngle_x10(int32_t *deg_x10);
 
 /**
  * @brief 读取电机状态标志

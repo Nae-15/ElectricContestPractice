@@ -93,6 +93,30 @@ float Yaw_Value;                    // 实测航向角
 #define ANGLE_DEADBAND    2.0f      // 角度死区（±2°内不调整）
 float Target_Yaw;                   // 维持角度目标值
 
+// ==================== 倾角平台串级PID -- 内环（电机编码器 -> RPM） ====================
+// 反馈: StepMotor_ReadAngle_x10()
+// 输出: StepMotor_RunSpeed_NoReply() 速度模式
+// 目标: 手动给定(后续接外环 MAIXCAM)
+
+#define INNER_KP            6.0f       // P: RPM per deg_x10 error
+#define INNER_KI            0.3f       // I: 微幅慢积
+#define INNER_KD            3.0f       // D: 抑制超调
+#define INNER_DEADBAND      15         // 死区 deg_x10 (=1.5度)
+#define INNER_MAX_RPM       400
+#define INNER_MIN_RPM       30
+#define INNER_I_MAX         80.0f
+#define INNER_PERIOD_MS     30         // 33Hz
+
+float Inner_Target_x10  = 300.0f;       // 目标角度 *10
+float Inner_Current_x10 = 0.0f;       // 当前角度 *10
+float Inner_Error        = 0.0f;
+float Inner_LastError    = 0.0f;
+float Inner_Integral     = 0.0f;
+float Inner_Output       = 0.0f;       // RPM(带符号)
+int   Inner_LastTime     = 0;
+int   Inner_Dir          = 0;          // 1=CW,-1=CCW,0=stop
+int   Inner_Status       = 0;          // PID 状态: 0=等周期 1=读编码器 2=OK -1=读失败
+
 void System_Init(void);     //系统初始化
 void Data_Init(void);       //数据初始化
 void Show_Init(void);       //显示初始化
@@ -106,51 +130,124 @@ void PID_Contorl(void);     //PID实际调用
 void Run_Stop(void);                    //停止模式
 void Run_Track(void);                   //沿线循迹模式
 void Run_AngleHold(float Target_Yaw);   //角度环维持模式
+//ZDT_EMM_DIR_CCW 为实际负
 
+/**/
 
+// ==================== 内环 PID 函数 ====================
+// 反馈: StepMotor_ReadAngle_x10() 电机编码器
+// 输出: StepMotor_RunSpeed_NoReply() 速度模式 RPM
+// 周期: INNER_PERIOD_MS (33Hz)
+void TiltInner_Loop(void)
+{
+    // 定时：到周期才执行
+    if (time - Inner_LastTime < INNER_PERIOD_MS) { Inner_Status = 0; return; }
+    Inner_LastTime = time;
+    Inner_Status = 1;  // 开始读编码器
 
+    // ---- 读编码器反馈 ----
+    int32_t deg;
+    if (StepMotor_ReadAngle_x10(&deg) != ZDT_EMM_RESULT_OK) { Inner_Status = -1; return; }
+    Inner_Current_x10 = (float)deg;
+    Inner_Status = 2;  // 读取成功
+
+    // ---- 计算误差 ----
+    Inner_LastError = Inner_Error;
+    Inner_Error = Inner_Target_x10 - Inner_Current_x10;
+
+    float abs_err = (Inner_Error > 0.0f) ? Inner_Error : -Inner_Error;
+
+    // ---- 死区：到位停转 ----
+    if (abs_err < (float)INNER_DEADBAND)
+    {
+        if (Inner_Dir != 0)
+        {
+            StepMotor_Stop_NoReply();
+            Inner_Dir = 0;
+        }
+        Inner_Output   = 0.0f;
+        Inner_Integral *= 0.7f;  // 衰减积分，静止不累积
+        return;
+    }
+
+    // ---- 抗积分饱和 ----
+    int at_pos = (Inner_Output >= INNER_MAX_RPM && Inner_Error > 0.0f);
+    int at_neg = (Inner_Output <= -INNER_MAX_RPM && Inner_Error < 0.0f);
+    if (!at_pos && !at_neg)
+    {
+        Inner_Integral += Inner_Error;
+        if (Inner_Integral >  INNER_I_MAX) Inner_Integral =  INNER_I_MAX;
+        if (Inner_Integral < -INNER_I_MAX) Inner_Integral = -INNER_I_MAX;
+    }
+
+    // ---- PID 计算 ----
+    Inner_Output = INNER_KP * Inner_Error
+                 + INNER_KI * Inner_Integral
+                 + INNER_KD * (Inner_Error - Inner_LastError);
+
+    // ---- 输出限幅 ----
+    if (Inner_Output >  INNER_MAX_RPM) Inner_Output =  INNER_MAX_RPM;
+    if (Inner_Output < -INNER_MAX_RPM) Inner_Output = -INNER_MAX_RPM;
+
+    // ---- 最小 RPM 钳位 ----
+    float abs_out = (Inner_Output > 0.0f) ? Inner_Output : -Inner_Output;
+    if (abs_out > 0.0f && abs_out < (float)INNER_MIN_RPM)
+        Inner_Output = (Inner_Output > 0.0f) ? (float)INNER_MIN_RPM : (float)-INNER_MIN_RPM;
+
+    // ---- 发送速度命令 ----
+    zdt_emm_dir_t dir = (Inner_Output > 0.0f) ? ZDT_EMM_DIR_CW : ZDT_EMM_DIR_CCW;
+    uint16_t rpm = (uint16_t)((Inner_Output > 0.0f) ? Inner_Output : -Inner_Output);
+    StepMotor_RunSpeed_NoReply(dir, rpm);
+    Inner_Dir = (Inner_Output > 0.0f) ? 1 : -1;
+}
+
+// 设置目标角度（度），自动清积分
+void TiltInner_SetTarget(float degrees)
+{
+    Inner_Target_x10 = degrees * 10.0f;
+    Inner_Integral   = 0.0f;
+}
 
 int main(void)
-{   
-    __enable_irq();//MSPM0 Boot ROM 冷启动后关闭了全局中断，启动代码未重新打开，加入 __enable_irq() 确保所有外设中断可用。
+{
+    __enable_irq();
 
     SYSCFG_DL_init();
- 
-    //系统计时中断
+
     NVIC_ClearPendingIRQ(TIMER_TICK_INST_INT_IRQN);
     NVIC_EnableIRQ(TIMER_TICK_INST_INT_IRQN);
-    
+
     LCD_Init();
     LCD_Fill(0, 0, 300, LCD_H, BLACK);
 
-    //步进电机初始化
     StepMotor_Init();
-    LCD_ShowString(30, 20, "MOTOR INIT OK", GREEN, BLACK, 16, 0);
+    Delay_ms(300);
+    StepMotor_ZeroPosition();
+    Delay_ms(300);
 
-    // 测试相对运动，捕获返回值用于诊断
-    {
-        zdt_emm_result_t ret;
-        char buf[32];
-
-        ret = StepMotor_MoveRelativeAngle(ZDT_EMM_DIR_CW, 450);
-        sprintf(buf, "Move +45deg: ret=%d", (int)ret);
-        LCD_ShowString(30, 50, buf, (ret == ZDT_EMM_RESULT_OK) ? GREEN : RED, BLACK, 16, 0);
-
-        Delay_ms(500);
-
-        ret = StepMotor_MoveRelativeAngle(ZDT_EMM_DIR_CCW, 900);
-        sprintf(buf, "Move -90deg: ret=%d", (int)ret);
-        LCD_ShowString(30, 75, buf, (ret == ZDT_EMM_RESULT_OK) ? GREEN : RED, BLACK, 16, 0);
-    }
-
-    // 返回值对照表
-    LCD_ShowString(30, 110, "0=OK 1=TIMEOUT 2=BAD_FRAME", YELLOW, BLACK, 16, 0);
-    LCD_ShowString(30, 130, "3=BAD_PARAM 4=LIMITED", YELLOW, BLACK, 16, 0);
-    LCD_ShowString(30, 150, "5=DEVICE_ERR 6=FORMAT_ERR", YELLOW, BLACK, 16, 0);
+    TiltInner_SetTarget(30.0f);
 
     while(1)
     {
+        // ---- 内环 PID（33Hz 定时执行）----
+        TiltInner_Loop();
 
+        // ---- LCD 显示 ----
+        LCD_ShowString( 30, 30, "Tgt:", GREEN, BLACK, 16, 0);
+        LCD_ShowFloatNum(70, 30, Inner_Target_x10 / 10.0f, 4, 1, GREEN, BLACK, 16);
+
+        LCD_ShowString( 30, 50, "Cur:", WHITE, BLACK, 16, 0);
+        LCD_ShowFloatNum(70, 50, Inner_Current_x10 / 10.0f, 4, 1, WHITE, BLACK, 16);
+
+        LCD_ShowString( 30, 70, "Err:", YELLOW, BLACK, 16, 0);
+        LCD_ShowFloatNum(70, 70, Inner_Error / 10.0f, 4, 1, YELLOW, BLACK, 16);
+
+        LCD_ShowString( 30, 90, "RPM:", MAGENTA, BLACK, 16, 0);
+        LCD_ShowFloatNum(70, 90, Inner_Output, 4, 1, MAGENTA, BLACK, 16);
+
+        LCD_ShowString( 30,110, "Sta:", CYAN, BLACK, 16, 0);
+        LCD_ShowIntNum( 70,110, Inner_Status, 2, CYAN, BLACK, 16);
+        LCD_ShowIntNum(100,110, time, 6, CYAN, BLACK, 16);
     }
 }
 
@@ -171,7 +268,7 @@ int main(void)
             maixcam_rx_ready = 0;
         }
 
-        if(time>Velocity_Interval)
+        if(Velocity_Counter>Velocity_Interval)
         {
             Velocity_Get();
             Distance_Get();
@@ -200,11 +297,7 @@ int main(void)
                 Run_Track();
                 break;
             }
-            case Mode_AngleHold: // 角度维持模式
-            {
-                Run_AngleHold(Target_Yaw);
-                break;
-            }
+
         }
     }
 }
@@ -241,7 +334,7 @@ void System_Init(void)//系统初始化
     YawPID_SetTarget(0.0f);
     YawPID_Enable(true);
 
-    //步进电机初始化
+    //步进电机占用串口2
     StepMotor_Init();
 
     Mode=Mode_Track;
@@ -290,8 +383,9 @@ void Show_Init(void)//显示初始化
     LCD_ShowString(120,100,"Distance:",WHITE,BLACK,16,0); 
     LCD_ShowString(30,120,"Yaw:",WHITE,BLACK,16,0);
     LCD_ShowString(30,140,"MAIX:",MAGENTA,BLACK,16,0);
-    LCD_ShowString(30,160,"PB1:",WHITE,BLACK,16,0);
-    LCD_ShowString(30,180,"TrBits:",WHITE,BLACK,16,0);
+    LCD_ShowString(30,160,"Time:",MAGENTA,BLACK,16,0);
+    LCD_ShowString(30,180,"PB1:",WHITE,BLACK,16,0);
+    LCD_ShowString(30,200,"TrBits:",WHITE,BLACK,16,0);
 }
 
 void ALL_Init(void)//全局初始化
@@ -316,10 +410,11 @@ void Show_Update(void)//显示更新
     LCD_ShowIntNum(200, 100, Distance, 6, WHITE, BLACK, 16);
     LCD_ShowIntNum(70, 120, Yaw_Value, 6, WHITE, BLACK, 16);
     LCD_ShowIntNum(90, 140, maixcam_data, 8, MAGENTA, BLACK, 16);
-    LCD_ShowIntNum(70, 160,
+    LCD_ShowIntNum(90, 160, time, 8, MAGENTA, BLACK, 16);
+    LCD_ShowIntNum(70, 180,
         (DL_GPIO_readPins(GPIOB, DL_GPIO_PIN_1) != 0) ? 1 : 0,
         1, WHITE, BLACK, 16);
-    LCD_ShowBinNum(100, 180, Track_GetBits(), WHITE, BLACK, 16);
+    LCD_ShowBinNum(100, 200, Track_GetBits(), WHITE, BLACK, 16);
 }
 
 void Velocity_Get(void)//计算轮子速度

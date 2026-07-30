@@ -9,7 +9,8 @@
 void StepMotor_Init(void)
 {
     /* 清空 RX FIFO 残留数据 */
-    while (!DL_UART_Main_isRXFIFOEmpty(UART_2_INST)) {
+    while (!DL_UART_Main_isRXFIFOEmpty(UART_2_INST)) 
+    {
         (void)DL_UART_Main_receiveData(UART_2_INST);
     }
 
@@ -29,7 +30,8 @@ void StepMotor_Init(void)
     Delay_ms(200);
 
     /* 清空电机回复数据，避免 RX FIFO 累积溢出 */
-    while (!DL_UART_Main_isRXFIFOEmpty(UART_2_INST)) {
+    while (!DL_UART_Main_isRXFIFOEmpty(UART_2_INST)) 
+    {
         (void)DL_UART_Main_receiveData(UART_2_INST);
     }
 }
@@ -77,6 +79,13 @@ zdt_emm_result_t StepMotor_Stop(void)
         ZDT_EMM_EXEC_NOW, MOTOR_TIMEOUT_US);
 }
 
+zdt_emm_result_t StepMotor_Stop_NoReply(void)
+{
+    return zdt_emm_stop_no_reply(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        ZDT_EMM_EXEC_NOW);
+}
+
 /**
  * @brief 将当前电机位置清零（设为新的绝对零点）
  */
@@ -84,18 +93,6 @@ zdt_emm_result_t StepMotor_ZeroPosition(void)
 {
     return zdt_emm_zero_position(
         STEP_MOTOR_UART, STEP_MOTOR_ADDR, MOTOR_TIMEOUT_US);
-}
-
-/**
- * @brief 执行回零操作（以最近碰撞点为参考，超时 5 秒）
- */
-zdt_emm_result_t StepMotor_Home(void)
-{
-    return zdt_emm_home(
-        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
-        ZDT_EMM_HOME_NEAREST,
-        ZDT_EMM_EXEC_NOW,
-        5000000U);
 }
 
 /**
@@ -136,21 +133,33 @@ zdt_emm_result_t StepMotor_ReadEncoder(uint16_t *encoder)
 }
 
 /**
- * @brief 读取当前角度（0.1° 单位）
+ * @brief 读取逻辑位置（受 ZeroPosition 影响）
  *
- * 换算：deg_x10 = encoder * 3600 / 65536
+ * 65536 单位 = 360°，正转增加，反转减少。
  */
-zdt_emm_result_t StepMotor_ReadAngle_x10(uint32_t *deg_x10)
+zdt_emm_result_t StepMotor_ReadPosition(int64_t *position)
 {
-    uint16_t encoder;
+    return zdt_emm_read_position_raw(
+        STEP_MOTOR_UART, STEP_MOTOR_ADDR,
+        position, MOTOR_TIMEOUT_US);
+}
+
+/**
+ * @brief 读取基于零点的当前角度（0.1° 单位，有符号）
+ *
+ * 换算：deg_x10 = position * 3600 / 65536
+ */
+zdt_emm_result_t StepMotor_ReadAngle_x10(int32_t *deg_x10)
+{
+    int64_t position;
     zdt_emm_result_t ret;
 
-    ret = zdt_emm_read_encoder_raw(
+    ret = zdt_emm_read_position_raw(
         STEP_MOTOR_UART, STEP_MOTOR_ADDR,
-        &encoder, MOTOR_TIMEOUT_US);
+        &position, MOTOR_TIMEOUT_US);
     if (ret == ZDT_EMM_RESULT_OK) {
-        /* encoder / 65536 * 3600 = encoder * 3600 / 65536 */
-        *deg_x10 = (uint32_t)(((uint32_t)encoder * 3600U + 32768U) / 65536U);
+        /* position * 3600 / 65536，四舍五入 */
+        *deg_x10 = (int32_t)((position * 3600 + (position >= 0 ? 32768 : -32768)) / 65536);
     }
     return ret;
 }
