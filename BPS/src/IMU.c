@@ -12,6 +12,7 @@ struct SAngle stcAngle = {0};
 
 // 角速度数据
 struct SGyro stcGyro = {0};
+volatile uint32_t g_imu_gyro_update_count = 0U;
 
 // 加速度数据
 struct SAccel stcAccel = {0};
@@ -69,6 +70,11 @@ float GyroY(void)
 float GyroZ(void)
 {
     return stcGyro.wz;
+}
+
+uint32_t GyroUpdateCount(void)
+{
+    return g_imu_gyro_update_count;
 }
 
 /******************************************************************************
@@ -187,6 +193,7 @@ void CopeSerial2Data(unsigned char ucData)
                 stcGyro.wx = (float)wx / 32768.0f * 2000.0f;  // °/s
                 stcGyro.wy = (float)wy / 32768.0f * 2000.0f;
                 stcGyro.wz = (float)wz / 32768.0f * 2000.0f;
+                g_imu_gyro_update_count++;
             }
             break;
             

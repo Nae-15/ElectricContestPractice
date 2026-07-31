@@ -67,6 +67,7 @@ extern struct SAngle  stcAngle;   // 角度数据
 extern struct SGyro   stcGyro;    // 角速度数据
 extern struct SAccel  stcAccel;   // 加速度数据
 extern struct SQuat   stcQuat;    // 四元数数据
+extern volatile uint32_t g_imu_gyro_update_count;
 
 /*============================================================================
  * 函数声明
@@ -83,6 +84,7 @@ float Pitch(void);
 float GyroX(void);
 float GyroY(void);
 float GyroZ(void);
+uint32_t GyroUpdateCount(void);
 
 float AccelX(void);
 float AccelY(void);
